@@ -3,15 +3,17 @@ package io.github.jamsesso.jsonlogic.ast;
 import io.github.jamsesso.jsonlogic.JsonLogicException;
 
 public class JsonLogicParseException extends JsonLogicException {
-  public JsonLogicParseException(String msg, String jsonPath) {
-    super(msg, jsonPath);
-  }
+	private static final long serialVersionUID = 1L;
 
-  public JsonLogicParseException(Throwable cause, String jsonPath) {
-    super(cause, jsonPath);
-  }
+	public JsonLogicParseException(final String msg, final String jsonPath) {
+		super(msg, jsonPath);
+	}
 
-  public JsonLogicParseException(String msg, Throwable cause, String jsonPath) {
-    super(msg, cause, jsonPath);
-  }
+	public JsonLogicParseException(final Throwable cause, final String jsonPath) {
+		super(cause, jsonPath);
+	}
+
+	public JsonLogicParseException(final String msg, final Throwable cause, final String jsonPath) {
+		super(msg, cause, jsonPath);
+	}
 }

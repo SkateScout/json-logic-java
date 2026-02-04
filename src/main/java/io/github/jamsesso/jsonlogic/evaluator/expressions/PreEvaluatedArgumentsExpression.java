@@ -10,10 +10,9 @@ import io.github.jamsesso.jsonlogic.utils.ArrayLike;
 public interface PreEvaluatedArgumentsExpression extends JsonLogicExpression {
 	Object evaluate(List<?> arguments, Object data, String jsonPath) throws JsonLogicEvaluationException;
 
-	@Override
-	default Object evaluate(final JsonLogicEvaluator evaluator, final List<?> arguments, final Object data, final String jsonPath) throws JsonLogicEvaluationException {
-		var values = evaluator.evaluate(arguments, data, jsonPath);
-		if (values.size() == 1 && ArrayLike.isArray(values.get(0))) values = ArrayLike.asList(values.get(0));
+	@Override default Object evaluate(final JsonLogicEvaluator evaluator, final List<?> arguments, final Object data, final String jsonPath) throws JsonLogicEvaluationException {
+		List<Object> values = evaluator.evaluate(arguments, data, jsonPath);
+		if (values.size() == 1 && ArrayLike.isList(values.get(0))) values = ArrayLike.asList(values.get(0));
 		return evaluate(values, data, jsonPath);
 	}
 }

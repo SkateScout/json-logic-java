@@ -3,15 +3,41 @@ package io.github.jamsesso.jsonlogic.utils;
 public final class JsonValueExtractor {
 	private JsonValueExtractor() { }
 
-	public static Object extract(final Object element) {
-		if(element == null) return null;
-		if(element instanceof final String t) return t;
-		if(element instanceof final Number t) return t;
-		if(element instanceof final Boolean t) return t;
-		if(element.getClass().isPrimitive()) return element;
-		if(MapLike.isMap(element)) return MapLike.asMap(element); // FIXME map.put(key, extract(object.get(key)));
-		if(ArrayLike.isArray(element))return ArrayLike.asList(element); // FIXME values.add(extract(item));
-		System.out.println("JsonValueExtractor.extract("+element.getClass().getCanonicalName()+")");
-		return element.toString();
-	}
+	// public static Object extract(com.google.gson.JsonElement element) {
+	//   if (element.isJsonObject()) {
+	//     Map<String, Object> map = new HashMap<>();
+	//     com.google.gson.JsonObject object = element.getAsJsonObject();
+	//
+	//     for (String key : object.keySet()) {
+	//       map.put(key, extract(object.get(key)));
+	//     }
+	//
+	//     return map;
+	//   }
+	//   else if (element.isJsonArray()) {
+	//     List<Object> values = new ArrayList<>();
+	//     for (com.google.gson.JsonElement item : element.getAsJsonArray()) {
+	//       values.add(extract(item));
+	//     }
+	//     return values;
+	//   }
+	//   else if (element.isJsonNull()) {
+	//     return null;
+	//   }
+	//   else if (element.isJsonPrimitive()) {
+	//   	com.google.gson.JsonPrimitive primitive = element.getAsJsonPrimitive();
+	//
+	//     if (primitive.isBoolean()) {
+	//       return primitive.getAsBoolean();
+	//     }
+	//     else if (primitive.isNumber()) {
+	//       return primitive.getAsNumber().doubleValue();
+	//     }
+	//     else {
+	//       return primitive.getAsString();
+	//     }
+	//   }
+	//
+	//   return element.toString();
+	// }
 }

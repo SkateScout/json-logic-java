@@ -6,5 +6,6 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="/LIBS/external.lib/json-20200518.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -28,17 +28,17 @@ public class ReduceExpression implements JsonLogicExpression {
 			throw new JsonLogicEvaluationException("reduce expects exactly 3 arguments", jsonPath);
 		}
 
-		final Object maybeArray = evaluator.evaluate(arguments.get(0), data, jsonPath + "[0]");
-		final Object accumulator = evaluator.evaluate(arguments.get(2), data, jsonPath + "[2]");
+		Object maybeArray  = evaluator.evaluate(arguments.get(0), data, jsonPath + "[0]");
+		Object accumulator = evaluator.evaluate(arguments.get(2), data, jsonPath + "[2]");
 
-		if (!ArrayLike.isArray(maybeArray)) {
+		if (!ArrayLike.isList(maybeArray)) {
 			return accumulator;
 		}
 
-		final Map<String, Object> context = new HashMap<>();
+		Map<String, Object> context = new HashMap<>();
 		context.put("accumulator", accumulator);
 
-		for (final Object item :ArrayLike.asList(maybeArray)) {
+		for (var item : ArrayLike.asList(maybeArray)) {
 			context.put("current", item);
 			context.put("accumulator", evaluator.evaluate(arguments.get(1), context, jsonPath + "[1]"));
 		}

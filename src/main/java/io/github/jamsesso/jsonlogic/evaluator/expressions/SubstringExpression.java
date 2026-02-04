@@ -1,72 +1,39 @@
 package io.github.jamsesso.jsonlogic.evaluator.expressions;
 
-import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluationException;
-
 import java.util.List;
 
-public class SubstringExpression implements PreEvaluatedArgumentsExpression {
-  public static final SubstringExpression INSTANCE = new SubstringExpression();
+import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluationException;
+import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluator;
+import io.github.jamsesso.jsonlogic.evaluator.JsonLogicExpression;
 
-  private SubstringExpression() {
-    // Use INSTANCE instead.
-  }
+public class SubstringExpression implements JsonLogicExpression {
+	public static final SubstringExpression INSTANCE = new SubstringExpression();
 
-  @Override
-  public String key() {
-    return "substr";
-  }
+	private SubstringExpression() {
+		// Use INSTANCE instead.
+	}
 
-  @Override
-  public Object evaluate(List arguments, Object data, String jsonPath) throws JsonLogicEvaluationException {
-    if (arguments.size() < 2 || arguments.size() > 3) {
-      throw new JsonLogicEvaluationException("substr expects 2 or 3 arguments", jsonPath);
-    }
+	@Override public String key() { return "substr"; }
 
-    if (!(arguments.get(1) instanceof Double)) {
-      throw new JsonLogicEvaluationException("second argument to substr must be a number", jsonPath + "[1]");
-    }
-
-    String value = arguments.get(0).toString();
-    int startIndex;
-    int endIndex;
-
-    if (arguments.size() == 2) {
-      startIndex = ((Double) arguments.get(1)).intValue();
-      endIndex = value.length();
-
-      if (startIndex < 0) {
-        startIndex = endIndex + startIndex;
-      }
-
-      if (startIndex < 0) {
-        return "";
-      }
-    }
-    else {
-      if (!(arguments.get(2) instanceof Double)) {
-        throw new JsonLogicEvaluationException("third argument to substr must be an integer", jsonPath + "[2]");
-      }
-
-      startIndex = ((Double) arguments.get(1)).intValue();
-
-      if (startIndex < 0) {
-        startIndex = value.length() + startIndex;
-      }
-
-      endIndex = ((Double) arguments.get(2)).intValue();
-
-      if (endIndex < 0) {
-        endIndex = value.length() + endIndex;
-      }
-      else {
-        endIndex += startIndex;
-      }
-
-      if (startIndex > endIndex || endIndex > value.length()) {
-        return "";
-      }
-    }
-
-    return value.substring(startIndex, endIndex);
-  }
+	@Override
+	public Object evaluate(final JsonLogicEvaluator evaluator, final List<?> args, final Object data, final String jsonPath) throws JsonLogicEvaluationException {
+		if (args.size() < 2 || args.size() > 3) throw new JsonLogicEvaluationException("substr expects 2 or 3 arguments", jsonPath);
+		if (!(evaluator.asDouble(args.get(1), data, jsonPath) instanceof Double arg1)) throw new JsonLogicEvaluationException("second argument to substr must be a number", jsonPath + "[1]");
+		String value = evaluator.evaluate(args.get(0), data, jsonPath).toString();
+		var len = value.length();
+		if (args.size() == 2) {
+			var startIndex = arg1.intValue();
+			var endIndex = len;
+			if (startIndex < 0) startIndex = endIndex + startIndex;
+			if (startIndex < 0) return "";
+			return value.substring(startIndex, endIndex);
+		}
+		if (!(evaluator.asDouble(args.get(2), data, jsonPath) instanceof Double arg2)) throw new JsonLogicEvaluationException("third argument to substr must be an integer", jsonPath + "[2]");
+		var startIndex = arg1.intValue();
+		if (startIndex < 0) startIndex = value.length() + startIndex;
+		var endIndex = arg2.intValue();
+		if (endIndex < 0) endIndex = len + endIndex; else endIndex += startIndex;
+		if (startIndex > endIndex || endIndex > value.length()) return "";
+		return value.substring(startIndex, endIndex);
+	}
 }
