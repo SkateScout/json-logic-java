@@ -40,13 +40,13 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 		jsonPath = jsonPath + ".var";
 		if (data == null) return evaluate(p0.defaultValue(), jsonPath + "[1]");
 		final var key = evaluate(p0.key(), jsonPath + "[0]");
-		if (key == null) return Optional.of(data).map(JsonLogicEvaluator::transform).orElse(evaluate(p0.defaultValue(), jsonPath + "[1]"));
+		if (key == null) return Optional.of(data).orElse(evaluate(p0.defaultValue(), jsonPath + "[1]"));
 
 		if (key instanceof final Number idx) {
 			final var index = idx.intValue();
 			if (ArrayLike.isList(data)) {
 				final var list = ArrayLike.asList(data);
-				if (index >= 0 && index < list.size()) return transform(list.get(index));
+				if (index >= 0 && index < list.size()) return list.get(index);
 			}
 			return evaluate(p0.defaultValue(), jsonPath + "[1]");
 		}
@@ -95,6 +95,7 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 		final var value = evaluate(p0, jsonPath);
 		if (value instanceof final String t) try { return Double.parseDouble(t); } catch (final NumberFormatException e) { return null; }
 		if (value instanceof final Number t) return t.doubleValue();
+		if (ArrayLike.isList(value) && ArrayLike.asList(value) instanceof final List<?> l && !l.isEmpty()) return asDouble(l.get(0), jsonPath);
 		return null;
 	}
 
@@ -128,21 +129,13 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 			final var list = ArrayLike.asList(data);
 			int index;
 			try { index = Integer.parseInt(key); }
-			catch (final NumberFormatException e) {
-				System.out.println("KEY: "+key+" RAW{"+raw.getClass().getCanonicalName()+"}: "+raw);
-				throw new JsonLogicEvaluationException(e, jsonPath);
-			}
+			catch (final NumberFormatException e) { throw new JsonLogicEvaluationException(e, jsonPath); }
 			if (index < 0 || index >= list.size()) return MISSING;
-			return transform(list.get(index));
+			return list.get(index);
 		}
-		if (data instanceof final Map map) {
-			if (map.containsKey(key)) return transform(map.get(key));
-			return MISSING;
-		}
+		if (data instanceof final Map map) return (map.containsKey(key) ? map.get(key) : MISSING);
 		if(data == null) return MISSING;
 		System.out.println("evaluatePartialVariable() "+data.getClass().getCanonicalName());
 		return null;
 	}
-
-	public static Object transform(final Object value) { return (value instanceof final Number t ? t.doubleValue() : value); }
 }
