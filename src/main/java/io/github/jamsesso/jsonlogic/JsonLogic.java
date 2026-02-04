@@ -1,5 +1,6 @@
 package io.github.jamsesso.jsonlogic;
 
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -23,8 +24,72 @@ import io.github.jamsesso.jsonlogic.evaluator.expressions.SubstringExpression;
 import io.github.jamsesso.jsonlogic.utils.ArrayLike;
 
 public final class JsonLogic {
-	private final Map<String, Object> parseCache = new ConcurrentHashMap<>();
-	private final Map<String, JsonLogicExpressionFI> expressions = new ConcurrentHashMap<>();
+	private final Map<String, Object               > parseCache  = new ConcurrentHashMap<>();
+	private       Map<String, JsonLogicExpressionFI> expressions;
+
+	private static void addOperation(final Map<String, JsonLogicExpressionFI> e, final String key, final JsonLogicExpressionFI fkt) { e.put(key, fkt); }
+
+	private static void addListOperation(final Map<String, JsonLogicExpressionFI> e, final String name, final Function<List<?>, Object> function) {
+		addOperation(e, name, (JsonLogicExpressionFI) (evaluator, arguments, jsonPath) -> {
+			var values = evaluator.evaluate(arguments, jsonPath);
+			if (values.size() == 1 && ArrayLike.isList(values.get(0))) values = ArrayLike.asList(values.get(0));
+			return function.apply(arguments);
+		});
+	}
+
+	private static final Map<String, JsonLogicExpressionFI> defaultExpressions;
+	static {
+		final var m = new HashMap<String, JsonLogicExpressionFI>();
+		for(final var e : Reduce.FUNCTIONS.entrySet()) addOperation(m, e.getKey(), e.getValue());
+		addOperation    (m, "if"  , JsonLogic::ifExpt);	// IF
+		addOperation    (m, "?:"  , JsonLogic::ifExpt);	// TERNARY
+		addOperation    (m, ">"   , (ev, arg, json) -> evaluate(">" , (a,b)->(a >  b), ev, arg, json));
+		addOperation    (m, ">="  , (ev, arg, json) -> evaluate(">=", (a,b)->(a >= b), ev, arg, json));
+		addOperation    (m, "<"   , (ev, arg, json) -> evaluate("<" , (a,b)->(a <  b), ev, arg, json));
+		addOperation    (m, "<="  , (ev, arg, json) -> evaluate("<=", (a,b)->(a <= b), ev, arg, json));
+		addOperation    (m, "!"   , (ev, arguments, jsonPath)-> arguments.isEmpty() ? false : !singleBoolean(ev, arguments, jsonPath+"!"));
+		addOperation    (m, "!!"  , (ev, arguments, jsonPath)-> arguments.isEmpty() ? true  :  singleBoolean(ev, arguments, jsonPath+"!!"));
+		addOperation    (m, "and" , (ev, arguments, jsonPath)-> andOr(true , ev, arguments, jsonPath));
+		addOperation    (m, "or"  , (ev, arguments, jsonPath)-> andOr(false, ev, arguments, jsonPath));
+		addOperation    (m, "some", (ev, arguments, jsonPath) -> has(true , ev, arguments, jsonPath));
+		addOperation    (m, "none", (ev, arguments, jsonPath) -> has(false, ev, arguments, jsonPath));
+		addOperation    (m, "!="  , (ev, arguments, jsonPath) -> !EqualityExpression.equality(ev, arguments, jsonPath));
+		addOperation    (m, "!==" , (ev, arguments,  jsonPath)->!strictEquality(ev, arguments, jsonPath));
+		addOperation    (m, "===", JsonLogic::strictEquality);
+		addListOperation(m, "cat"         , a->a.stream().map(o -> o instanceof final Double t && t.toString().endsWith(".0") ? t.intValue() : o).map(Object::toString).collect(Collectors.joining()));
+		addOperation    (m, "=="          , (JsonLogicExpressionFI) EqualityExpression::equality);
+		addOperation    (m, "map"         , MapExpression   ::map);
+		addOperation    (m, "filter"      , FilterExpression::filter);
+		addOperation    (m, "reduce"      , ReduceExpression::reduce);
+		addOperation    (m, "all"         , JsonLogic       ::all );
+		addOperation    (m, "in"          , JsonLogic       ::in);
+		addOperation    (m, "substr"      , SubstringExpression::substr);
+		addOperation    (m, "missing"     , new MissingExpression(false));
+		addOperation    (m, "missing_some", new MissingExpression(true ));
+		addOperation    (m, "log"         , JsonLogic::log);
+		addOperation    (m, "merge"       , JsonLogic::merge);
+		defaultExpressions = m;
+	}
+
+	public JsonLogic() { expressions = defaultExpressions; }
+
+
+	public JsonLogic addOperation(final String key, final JsonLogicExpressionFI fkt) {
+		synchronized (defaultExpressions) {
+			if(expressions == defaultExpressions) expressions = new ConcurrentHashMap<>(defaultExpressions);
+			expressions.put(key, fkt);
+		}
+		return this;
+	}
+
+	public JsonLogic addListOperation(final String name, final Function<List<?>, Object> function) {
+		return addOperation(name, (JsonLogicExpressionFI) (evaluator, arguments, jsonPath) -> {
+			var values = evaluator.evaluate(arguments, jsonPath);
+			if (values.size() == 1 && ArrayLike.isList(values.get(0))) values = ArrayLike.asList(values.get(0));
+			return function.apply(arguments);
+		});
+	}
+
 
 	private static Object all(final JsonLogicEvaluator evaluator, final List<?> arguments, final String jsonPath) throws JsonLogicEvaluationException {
 		if (arguments.size() != 2) throw new JsonLogicEvaluationException("all expects exactly 2 arguments", jsonPath);
@@ -111,39 +176,6 @@ public final class JsonLogic {
 		return evaluator.asBoolean(args.get(0), jsonPath);
 	}
 
-	public JsonLogic() {
-		// Add default operations
-		for(final var e : Reduce.FUNCTIONS.entrySet()) addOperation(e.getKey(), e.getValue());
-		addOperation    ("if"  , JsonLogic::ifExpt);	// IF
-		addOperation    ("?:"  , JsonLogic::ifExpt);	// TERNARY
-		addOperation    (">"   , (ev, arg, json) -> evaluate(">" , (a,b)->(a >  b), ev, arg, json));
-		addOperation    (">="  , (ev, arg, json) -> evaluate(">=", (a,b)->(a >= b), ev, arg, json));
-		addOperation    ("<"   , (ev, arg, json) -> evaluate("<" , (a,b)->(a <  b), ev, arg, json));
-		addOperation    ("<="  , (ev, arg, json) -> evaluate("<=", (a,b)->(a <= b), ev, arg, json));
-		addOperation    ("!"   , (ev, arguments, jsonPath)-> arguments.isEmpty() ? false : !singleBoolean(ev, arguments, jsonPath+"!"));
-		addOperation    ("!!"  , (ev, arguments, jsonPath)-> arguments.isEmpty() ? true  :  singleBoolean(ev, arguments, jsonPath+"!!"));
-		addOperation    ("and" , (ev, arguments, jsonPath)-> andOr(true , ev, arguments, jsonPath));
-		addOperation    ("or"  , (ev, arguments, jsonPath)-> andOr(false, ev, arguments, jsonPath));
-		addOperation    ("some", (ev, arguments, jsonPath) -> has(true , ev, arguments, jsonPath));
-		addOperation    ("none", (ev, arguments, jsonPath) -> has(false, ev, arguments, jsonPath));
-		addOperation    ("!="  , (ev, arguments, jsonPath) -> !EqualityExpression.equality(ev, arguments, jsonPath));
-		addOperation    ("!==" , (ev, arguments,  jsonPath)->!strictEquality(ev, arguments, jsonPath));
-
-		addListOperation("cat", args->args.stream().map(obj -> obj instanceof final Double t && t.toString().endsWith(".0") ? t.intValue() : obj).map(Object::toString).collect(Collectors.joining()));
-		addOperation    ("==", (JsonLogicExpressionFI) EqualityExpression::equality);
-		addOperation    (MapExpression.INSTANCE);
-		addOperation    (FilterExpression.INSTANCE);
-		addOperation    (ReduceExpression.INSTANCE);
-		addOperation    ("all" , JsonLogic::all );
-		addOperation    ("in", JsonLogic::in);
-		addOperation    (SubstringExpression.INSTANCE);
-		addOperation    (MissingExpression.ALL);
-		addOperation    (MissingExpression.SOME);
-		addOperation    ("log", JsonLogic::log);
-		addOperation("merge", JsonLogic::merge);
-		addOperation("===", JsonLogic::strictEquality);
-	}
-
 	private static List<?> merge(final JsonLogicEvaluator evaluator, final List<?> args, final String jsonPath) throws JsonLogicEvaluationException {
 		final var ret = new LinkedList<>();
 		final var todo = new LinkedList<Object>(args);
@@ -169,14 +201,6 @@ public final class JsonLogic {
 		return left != null && left.equals(right);
 	}
 
-	public JsonLogic addListOperation(final String name, final Function<List<?>, Object> function) {
-		return addOperation(name, (JsonLogicExpressionFI) (evaluator, arguments, jsonPath) -> {
-			var values = evaluator.evaluate(arguments, jsonPath);
-			if (values.size() == 1 && ArrayLike.isList(values.get(0))) values = ArrayLike.asList(values.get(0));
-			return function.apply(arguments);
-		});
-	}
-
 	public JsonLogic addOperation(final String name, final Function<Object[], Object> function) {
 		return addOperation(name, (JsonLogicExpressionFI) (evaluator, arguments, jsonPath) -> {
 			var values = evaluator.evaluate(arguments, jsonPath);
@@ -185,17 +209,11 @@ public final class JsonLogic {
 		});
 	}
 
-	public JsonLogic addOperation(final String key, final JsonLogicExpressionFI fkt) {
-		expressions.put(key, fkt);
-		return this;
-	}
-
 	public JsonLogic addOperation(final JsonLogicExpression expression) { return addOperation(expression.key(), expression); }
 
 	public Object apply(final Object expr, final Object rawData) throws JsonLogicException {
-		final var data = JSON.plain(rawData);
 		if(expr instanceof final String t) return t;
-		final var evaluator = new JsonLogicEvaluator(expressions, data);
+		final var evaluator = new JsonLogicEvaluator(expressions, JSON.plain(rawData));
 		return evaluator.evaluate(JsonLogicParser.parse(expr, "$"), "$");
 	}
 

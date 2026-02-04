@@ -1,6 +1,6 @@
 package io.github.jamsesso.jsonlogic.evaluator.expressions;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -9,22 +9,11 @@ import java.util.Set;
 
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluationException;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluator;
-import io.github.jamsesso.jsonlogic.evaluator.JsonLogicExpression;
+import io.github.jamsesso.jsonlogic.evaluator.JsonLogicExpressionFI;
 import io.github.jamsesso.jsonlogic.utils.ArrayLike;
 import io.github.jamsesso.jsonlogic.utils.MapLike;
 
-public class MissingExpression implements JsonLogicExpression {
-	public static final MissingExpression ALL = new MissingExpression(false);
-	public static final MissingExpression SOME = new MissingExpression(true);
-
-	private final boolean isSome;
-
-	private MissingExpression(final boolean isSome) {
-		this.isSome = isSome;
-	}
-
-	@Override public String key() { return isSome ? "missing_some" : "missing"; }
-
+public record MissingExpression(boolean isSome) implements JsonLogicExpressionFI {
 	@Override
 	public Object evaluate(final JsonLogicEvaluator evaluator, final List<?> args, final String jsonPath) throws JsonLogicEvaluationException {
 		if (isSome && (args.size() < 2)) throw new JsonLogicEvaluationException("missing_some expects first argument to be an integer and the second argument to be an array", jsonPath);
@@ -45,7 +34,7 @@ public class MissingExpression implements JsonLogicExpression {
 		final var requiredKeys = new LinkedHashSet<>(options);
 		requiredKeys.removeAll(providedKeys); // Keys that I need but do not have
 		if (isSome && options.size() - requiredKeys.size() >= someCnt.intValue()) return Collections.EMPTY_LIST;
-		return new ArrayList<>(requiredKeys);
+		return Arrays.asList(requiredKeys.toArray());
 	}
 
 	/**

@@ -13,8 +13,9 @@ public class ArrayLike {
 	public static List<Object> asList(final Object data) {
 		if (data instanceof final List l) return l;
 		if (data != null && data.getClass().isArray()) {
+			System.out.println("asList({"+data.getClass().getCanonicalName()+"})");
 			final var len = Array.getLength(data);
-			final var l = new ArrayList<>(len);
+			final var l   = new ArrayList<>(len);
 			for (var i = 0; i < len; i++) l.add(i, Array.get(data, i));
 			return l;
 		}

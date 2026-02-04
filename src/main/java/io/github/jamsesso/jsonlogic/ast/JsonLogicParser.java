@@ -1,6 +1,6 @@
 package io.github.jamsesso.jsonlogic.ast;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -16,19 +16,17 @@ public final class JsonLogicParser {
 
 	private static List<Object> parse(final List<?> arguments, final String jsonPath) throws JsonLogicParseException {
 		final var size = arguments.size();
-		final var ret  = new ArrayList<>(size);
+		final var ret = new Object[size];
 		var idx=0;
-		for (final var element : arguments) ret.add(parse(element, jsonPath+" ["+(idx++)+"]"));
-		return ret;
+		for (final var element : arguments) { ret[idx] = parse(element, jsonPath+" ["+idx+"]"); idx++; }
+		return Arrays.asList(ret);
 	}
 
 	public static JsonLogicNode parseMap(final Map<?,?> map, final String jsonPath) throws JsonLogicParseException {
 		// Handle objects & variables
 		if (map.size() != 1) throw new JsonLogicParseException("objects must have exactly 1 key defined, found " + map.size(), jsonPath);
 		final var key = map.keySet().iterator().next().toString().toLowerCase();
-		@SuppressWarnings("unlikely-arg-type")
-		final
-		var argumentNode = parse(map.get(key), String.format("%s.%s", jsonPath, key));
+		final var argumentNode = parse(map.get(key), String.format("%s.%s", jsonPath, key));
 
 		List<Object> arguments;
 		// Always coerce single-argument operations into a JsonLogicArray with a single element.
@@ -48,7 +46,7 @@ public final class JsonLogicParser {
 	public static Object parse(final Object raw, final String jsonPath) throws JsonLogicParseException {
 		// Handle primitives
 		final var plain = JSON.plain(raw);
-		if(plain == null                        ) return null;
+		if(plain == null                              ) return null;
 		if(plain instanceof final Number             t) return t;
 		if(plain instanceof final String             t) return t;
 		if(plain instanceof final Boolean            t) return t;

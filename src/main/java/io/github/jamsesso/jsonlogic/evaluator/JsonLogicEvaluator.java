@@ -1,7 +1,7 @@
 package io.github.jamsesso.jsonlogic.evaluator;
 
 import java.lang.reflect.Array;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -19,21 +19,14 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 
 	public JsonLogicEvaluator scoped(final Object scopeData) { return new JsonLogicEvaluator(expressions, scopeData); }
 
-
 	/** Sentinel object to represent a missing value (for internal use only). */
 	private static final Object MISSING = new Object();
 
-	// public JsonLogicEvaluator(final Collection<JsonLogicExpression> expressions) {
-	// 	final var map = new HashMap<String, JsonLogicExpressionFI>();
-	// 	for (final JsonLogicExpression expression : expressions) map.put(expression.key(), expression);
-	// 	this(map);
-	// }
-
 	public List<Object> evaluate(final List<?> t, final String jsonPath) throws JsonLogicEvaluationException {
-		final List<Object> values = new ArrayList<>(t.size());
 		var index = 0;
-		for(final var element : t) values.add(evaluate(element, String.format("%s[%d]", jsonPath, index++)));
-		return values;
+		final var ret = new Object[t.size()];
+		for(final var element : t) { ret[index] = evaluate(element, String.format("%s[%d]", jsonPath, index)); index++; }
+		return Arrays.asList(ret);
 	}
 
 	public Object evaluateVar(final JsonLogicVariable p0, String jsonPath) throws JsonLogicEvaluationException {
