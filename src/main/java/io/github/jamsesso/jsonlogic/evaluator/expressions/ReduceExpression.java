@@ -12,35 +12,26 @@ import io.github.jamsesso.jsonlogic.utils.ArrayLike;
 public class ReduceExpression implements JsonLogicExpression {
 	public static final ReduceExpression INSTANCE = new ReduceExpression();
 
-	private ReduceExpression() {
-		// Use INSTANCE instead.
-	}
+	// Use INSTANCE instead.
+	private ReduceExpression() { }
+
+	@Override public String key() { return "reduce"; }
 
 	@Override
-	public String key() {
-		return "reduce";
-	}
-
-	@Override
-	public Object evaluate(final JsonLogicEvaluator evaluator, final List<?> arguments, final Object data, final String jsonPath)
+	public Object evaluate(final JsonLogicEvaluator evaluator, final List<?> arguments, final String jsonPath)
 			throws JsonLogicEvaluationException {
-		if (arguments.size() != 3) {
-			throw new JsonLogicEvaluationException("reduce expects exactly 3 arguments", jsonPath);
-		}
+		if (arguments.size() != 3) throw new JsonLogicEvaluationException("reduce expects exactly 3 arguments", jsonPath);
+		final var maybeArray  = evaluator.evaluate(arguments.get(0), jsonPath + "[0]");
+		final var accumulator = evaluator.evaluate(arguments.get(2), jsonPath + "[2]");
 
-		Object maybeArray  = evaluator.evaluate(arguments.get(0), data, jsonPath + "[0]");
-		Object accumulator = evaluator.evaluate(arguments.get(2), data, jsonPath + "[2]");
+		if (!ArrayLike.isList(maybeArray)) return accumulator;
 
-		if (!ArrayLike.isList(maybeArray)) {
-			return accumulator;
-		}
-
-		Map<String, Object> context = new HashMap<>();
+		final Map<String, Object> context = new HashMap<>();
 		context.put("accumulator", accumulator);
 
-		for (var item : ArrayLike.asList(maybeArray)) {
+		for (final var item : ArrayLike.asList(maybeArray)) {
 			context.put("current", item);
-			context.put("accumulator", evaluator.evaluate(arguments.get(1), context, jsonPath + "[1]"));
+			context.put("accumulator", evaluator.scoped(context).evaluate(arguments.get(1), jsonPath + "[1]"));
 		}
 
 		return context.get("accumulator");

@@ -17,12 +17,12 @@ public class MapExpression implements JsonLogicExpression {
 
 	@Override public String key() { return "map"; }
 
-	@Override public Object evaluate(final JsonLogicEvaluator evaluator, final List<?> arguments, final Object data, final String jsonPath) throws JsonLogicEvaluationException {
+	@Override public Object evaluate(final JsonLogicEvaluator evaluator, final List<?> arguments, final String jsonPath) throws JsonLogicEvaluationException {
 		if (arguments.size() != 2)  throw new JsonLogicEvaluationException("map expects exactly 2 arguments", jsonPath);
-		Object maybeArray = evaluator.evaluate(arguments.get(0), data, jsonPath + "[0]");
+		final var maybeArray = evaluator.evaluate(arguments.get(0), jsonPath + "[0]");
 		if (!ArrayLike.isList(maybeArray)) return Collections.emptyList();
-		List<Object> result = new ArrayList<>();
-		for (Object item : ArrayLike.asList(maybeArray)) result.add(evaluator.evaluate(arguments.get(1), item, jsonPath + "[1]"));
+		final List<Object> result = new ArrayList<>();
+		for (final Object item : ArrayLike.asList(maybeArray)) result.add(evaluator.scoped(item).evaluate(arguments.get(1), jsonPath + "[1]"));
 		return result;
 	}
 }

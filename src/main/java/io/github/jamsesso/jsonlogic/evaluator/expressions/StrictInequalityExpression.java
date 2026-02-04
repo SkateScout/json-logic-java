@@ -16,16 +16,11 @@ public class StrictInequalityExpression implements JsonLogicExpression {
 		this.delegate = delegate;
 	}
 
-	@Override
-	public String key() {
-		return "!==";
-	}
+	@Override public String key() { return "!=="; }
 
 	@Override
-	public Object evaluate(final JsonLogicEvaluator evaluator, final List<?> arguments, final Object data, final String jsonPath)
-			throws JsonLogicEvaluationException {
-		final var result = (boolean) delegate.evaluate(evaluator, arguments, data, jsonPath);
-
+	public Object evaluate(final JsonLogicEvaluator evaluator, final List<?> arguments, final String jsonPath) throws JsonLogicEvaluationException {
+		final var result = (boolean) delegate.evaluate(evaluator, arguments, jsonPath);
 		return !result;
 	}
 }

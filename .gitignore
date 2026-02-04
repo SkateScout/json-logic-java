@@ -1,8 +1,2 @@
-.gradle/
-.idea/
-out/
-build/
-.DS_Store
-secring.gpg
-.vscodebin 
-/bin/
+bin
+.gitignore.local

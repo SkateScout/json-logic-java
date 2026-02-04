@@ -26,34 +26,23 @@ public class MissingExpression implements JsonLogicExpression {
 	@Override public String key() { return isSome ? "missing_some" : "missing"; }
 
 	@Override
-	public Object evaluate(final JsonLogicEvaluator evaluator, final List<?> args, final Object data, final String jsonPath) throws JsonLogicEvaluationException {
+	public Object evaluate(final JsonLogicEvaluator evaluator, final List<?> args, final String jsonPath) throws JsonLogicEvaluationException {
 		if (isSome && (args.size() < 2)) throw new JsonLogicEvaluationException("missing_some expects first argument to be an integer and the second argument to be an array", jsonPath);
-		Double someCnt = 0.;
-		List<Object> values = evaluator.evaluate(args, data, jsonPath);
+		var values = evaluator.evaluate(args, jsonPath);
 		if (values.size() == 1 && ArrayLike.isList(values.get(0))) values = ArrayLike.asList(values.get(0));
-		var arguments= evaluator.evaluate(values, data, jsonPath);
+		final var arguments= evaluator.evaluate(values, jsonPath);
 
-		if (isSome) {
-			if(!ArrayLike.isList(arguments.get(1)))
-				throw new JsonLogicEvaluationException("missing_some expects first argument to be an integer and the second argument to be an array", jsonPath);
-
-			if(null == (someCnt = evaluator.asDouble(args.get(0), data, jsonPath)))
-				throw new JsonLogicEvaluationException("missing_some expects first argument to be an integer and the second argument to be an array", jsonPath);
-		}
+		Double someCnt = 0.;
+		if(isSome && (!ArrayLike.isList(arguments.get(1)) || (null == (someCnt = evaluator.asDouble(args.get(0), jsonPath)))))
+			throw new JsonLogicEvaluationException("missing_some expects first argument to be an integer and the second argument to be an array", jsonPath);
 
 
-		if (!MapLike.isEligible(data)) {
-			if (isSome) {
-				if (someCnt.intValue() <= 0) return Collections.EMPTY_LIST;
-				return arguments.get(1);
-			}
-			return arguments;
-		}
+		if (!MapLike.isEligible(evaluator.data())) return (isSome ? (someCnt.intValue() <= 0 ? Collections.EMPTY_LIST : arguments.get(1)) : arguments);
 
-		var map = new MapLike(data);
-		var options = isSome ? ArrayLike.asList(arguments.get(1)) : arguments;
-		var providedKeys = getFlatKeys(map);
-		var requiredKeys = new LinkedHashSet<>(options);
+		final var map          = MapLike.asMap(evaluator.data());
+		final var options      = isSome ? ArrayLike.asList(arguments.get(1)) : arguments;
+		final var providedKeys = getFlatKeys(map);
+		final var requiredKeys = new LinkedHashSet<>(options);
 		requiredKeys.removeAll(providedKeys); // Keys that I need but do not have
 		if (isSome && options.size() - requiredKeys.size() >= someCnt.intValue()) return Collections.EMPTY_LIST;
 		return new ArrayList<>(requiredKeys);
@@ -69,9 +58,9 @@ public class MissingExpression implements JsonLogicExpression {
 	private static Set<String> getFlatKeys(final Map<?,?> map) { return getFlatKeys(map, ""); }
 
 	private static Set<String> getFlatKeys(final Map<?,?> map, final String prefix) {
-		var keys = new LinkedHashSet<String>();
-		for (var entry : map.entrySet())
-			if (MapLike.isEligible(entry.getValue())) keys.addAll(getFlatKeys(new MapLike(entry.getValue()), prefix + entry.getKey() + "."));
+		final var keys = new LinkedHashSet<String>();
+		for (final var entry : map.entrySet())
+			if (MapLike.isEligible(entry.getValue())) keys.addAll(getFlatKeys(MapLike.asMap(entry.getValue()), prefix + entry.getKey() + "."));
 			else keys.add(prefix + entry.getKey());
 
 		return keys;
