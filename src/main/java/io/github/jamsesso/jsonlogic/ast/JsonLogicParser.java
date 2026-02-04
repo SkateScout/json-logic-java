@@ -1,95 +1,69 @@
 package io.github.jamsesso.jsonlogic.ast;
 
-import com.google.gson.*;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import io.github.jamsesso.jsonlogic.utils.ArrayLike;
+import io.github.jamsesso.jsonlogic.utils.MapLike;
+
 public final class JsonLogicParser {
-  private static final JsonParser PARSER = new JsonParser();
+	// private static final JsonParser PARSER = new JsonParser();
 
-  private JsonLogicParser() {
-    // Utility class has no public constructor.
-  }
+	private JsonLogicParser() {
+		// Utility class has no public constructor.
+	}
 
-  public static JsonLogicNode parse(String json) throws JsonLogicParseException {
-    try {
-      return parse(PARSER.parse(json));
-    }
-    catch (JsonSyntaxException e) {
-      throw new JsonLogicParseException(e, "$");
-    }
-  }
+	public static JsonLogicNode parse(final String json) throws JsonLogicParseException {
+		//  try {
+		//    return parse(PARSER.parse(json));
+		//  }
+		//  catch (JsonSyntaxException e) {
+		//    throw new JsonLogicParseException(e, "$");
+		//  }
+		throw new UnsupportedOperationException("TBD");
+	}
 
-  private static JsonLogicNode parse(JsonElement root) throws JsonLogicParseException {
-    return parse(root, "$");
-  }
-  private static JsonLogicNode parse(JsonElement root, String jsonPath) throws JsonLogicParseException {
-    // Handle null
-    if (root.isJsonNull()) {
-      return JsonLogicNull.NULL;
-    }
+	private static Object parse(final Object root) throws JsonLogicParseException { return parse(root, "$"); }
+	private static Object parse(final Object root, final String jsonPath) throws JsonLogicParseException {
+		// Handle null
+		if(root == null) return null;
+		if(root instanceof final String  t) return t;
+		if(root instanceof final Number  t) return t;
+		if(root instanceof final Boolean t) return t;
+		final var rc = root.getClass();
+		if(rc.isPrimitive()) return root;
 
-    // Handle primitives
-    if (root.isJsonPrimitive()) {
-      JsonPrimitive primitive = root.getAsJsonPrimitive();
+		// Handle arrays
+		if(ArrayLike.isArray(root)) {
+			final var array = ArrayLike.asList(root);
+			final List<Object> elements = new ArrayList<>(array.size());
 
-      if (primitive.isString()) {
-        return new JsonLogicString(primitive.getAsString());
-      }
+			var index = 0;
+			for (final var element : array) elements.add(parse(element, String.format("%s[%d]", jsonPath, index++)));
+			return elements;
+		}
+		if(MapLike.isMap(root)) throw new JsonLogicParseException("not an map", jsonPath);
+		// Handle objects & variables
+		final var object = MapLike.asMap(root);
 
-      if (primitive.isNumber()) {
-        return new JsonLogicNumber(primitive.getAsNumber());
-      }
 
-      if (primitive.isBoolean() && primitive.getAsBoolean()) {
-        return JsonLogicBoolean.TRUE;
-      }
-      else {
-        return JsonLogicBoolean.FALSE;
-      }
-    }
 
-    // Handle arrays
-    if (root.isJsonArray()) {
-      JsonArray array = root.getAsJsonArray();
-      List<JsonLogicNode> elements = new ArrayList<>(array.size());
+		if (object.size() != 1) throw new JsonLogicParseException("objects must have exactly 1 key defined, found " + object.size(), jsonPath);
+		final var key = object.keySet().iterator().next().toString();
 
-      int index = 0;
-      for (JsonElement element : array) {
-        elements.add(parse(element, String.format("%s[%d]", jsonPath, index++)));
-      }
+		// Always coerce single-argument operations into a JsonLogicArray with a single element.
+		final var argumentNode = parse(object.get(key), String.format("%s.%s", jsonPath, key));
+		final var arguments = ArrayLike.isArray(argumentNode) ? ArrayLike.asList(argumentNode) : Collections.singletonList(argumentNode);
 
-      return new JsonLogicArray(elements);
-    }
 
-    // Handle objects & variables
-    JsonObject object = root.getAsJsonObject();
+		// Special case for variable handling
+		if ("var".equals(key)) {
+			final var defaultValue = arguments.size() > 1 ? arguments.get(1) : null;
+			return new JsonLogicVariable(arguments.size() < 1 ? null : arguments.get(0), defaultValue);
+		}
 
-    if (object.keySet().size() != 1) {
-      throw new JsonLogicParseException("objects must have exactly 1 key defined, found " + object.keySet().size(), jsonPath);
-    }
-
-    String key = object.keySet().stream().findAny().get();
-    JsonLogicNode argumentNode = parse(object.get(key), String.format("%s.%s", jsonPath, key));
-    JsonLogicArray arguments;
-
-    // Always coerce single-argument operations into a JsonLogicArray with a single element.
-    if (argumentNode instanceof JsonLogicArray) {
-      arguments = (JsonLogicArray) argumentNode;
-    }
-    else {
-      arguments = new JsonLogicArray(Collections.singletonList(argumentNode));
-    }
-
-    // Special case for variable handling
-    if ("var".equals(key)) {
-      JsonLogicNode defaultValue = arguments.size() > 1 ? arguments.get(1) : JsonLogicNull.NULL;
-      return new JsonLogicVariable(arguments.size() < 1 ? JsonLogicNull.NULL : arguments.get(0), defaultValue);
-    }
-
-    // Handle regular operations
-    return new JsonLogicOperation(key, arguments);
-  }
+		// Handle regular operations
+		return new JsonLogicOperation(key, arguments);
+	}
 }

@@ -1,10 +1,10 @@
 package io.github.jamsesso.jsonlogic.evaluator;
 
-import io.github.jamsesso.jsonlogic.ast.JsonLogicArray;
+import java.util.List;
 
 public interface JsonLogicExpression {
-  String key();
+	String key();
 
-  Object evaluate(JsonLogicEvaluator evaluator, JsonLogicArray arguments, Object data, String jsonPath)
-    throws JsonLogicEvaluationException;
+	Object evaluate(JsonLogicEvaluator evaluator, List<?> arguments, Object data, String jsonPath)
+			throws JsonLogicEvaluationException;
 }

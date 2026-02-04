@@ -1,196 +1,57 @@
 package io.github.jamsesso.jsonlogic.utils;
 
-import com.google.gson.JsonArray;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluator;
 
-import java.lang.reflect.Array;
-import java.util.*;
-import java.util.stream.Collectors;
+public class ArrayLike {
 
-public class ArrayLike implements List<Object> {
-  private final List<Object> delegate;
+	@SuppressWarnings("unchecked")
+	public static List<?> asList(final Object data) {
 
-  @SuppressWarnings("unchecked")
-  public ArrayLike(Object data) {
-    if (data instanceof List) {
-      delegate = ((List<Object>) data)
-              .stream()
-              .map(JsonLogicEvaluator::transform)
-              .collect(Collectors.toList());
-    }
-    else if (data != null && data.getClass().isArray()) {
-      delegate = new ArrayList<>();
+		if (data instanceof final List t) return Collections.unmodifiableList(t);
+		// delegate = ((List<Object>) data).stream().map(JsonLogicEvaluator::transform) .collect(Collectors.toList());
+		if (data != null && data.getClass().isArray()) {
+			final var ret = new ArrayList<>();
+			for (var i = 0; i < Array.getLength(data); i++) ret.add(i, JsonLogicEvaluator.transform(Array.get(data, i)));
+			return Collections.unmodifiableList(ret);
 
-      for (int i = 0; i < Array.getLength(data); i++) {
-        delegate.add(i, JsonLogicEvaluator.transform(Array.get(data, i)));
-      }
-    }
-    else if (data instanceof JsonArray) {
-      delegate = (List) JsonValueExtractor.extract((JsonArray) data);
-    }
-    else if (data instanceof Iterable) {
-      delegate = new ArrayList<>();
+		}
+		if (data instanceof final Iterable t) {
+			final var ret = new ArrayList<>();
+			for (final Object item : t) ret.add(JsonLogicEvaluator.transform(item));
+			return ret;
+		}
 
-      for (Object item : (Iterable) data) {
-        delegate.add(JsonLogicEvaluator.transform(item));
-      }
-    }
-    else {
-      throw new IllegalArgumentException("ArrayLike only works with lists, iterables, arrays, or JsonArray");
-    }
-  }
+		throw new IllegalArgumentException("ArrayLike only works with lists, iterables, arrays, or JsonArray");
 
-  @Override
-  public int size() {
-    return delegate.size();
-  }
+	}
 
-  @Override
-  public boolean isEmpty() {
-    return delegate.isEmpty();
-  }
 
-  @Override
-  public boolean contains(Object o) {
-    return delegate.contains(o);
-  }
+	// FIXME add equals
+	// @Override
+	// public boolean equals(final Object other) {
+	// 	if (this == other) return true;
+	// 	if (other instanceof Iterable) {
+	// 		var i = 0;
+	// 		for (final Object item : (Iterable) other) {
+	// 			if ((i >= delegate.size()) || !Objects.equals(item, delegate.get(i))) {
+	// 				return false;
+	// 			}
+	//
+	// 			i++;
+	// 		}
+	//
+	// 		return(i == delegate.size());
+	// 	}
+	//
+	// 	return false;
+	// }
 
-  @Override
-  public Iterator<Object> iterator() {
-    return delegate.iterator();
-  }
-
-  @Override
-  public Object[] toArray() {
-    return delegate.toArray();
-  }
-
-  @Override
-  public <T> T[] toArray(T[] a) {
-    return delegate.toArray(a);
-  }
-
-  @Override
-  public boolean add(Object o) {
-    throw new UnsupportedOperationException("ArrayLike is immutable");
-  }
-
-  @Override
-  public boolean remove(Object o) {
-    throw new UnsupportedOperationException("ArrayLike is immutable");
-  }
-
-  @Override
-  public boolean containsAll(Collection<?> c) {
-    return delegate.containsAll(c);
-  }
-
-  @Override
-  public boolean addAll(Collection<?> c) {
-    throw new UnsupportedOperationException("ArrayLike is immutable");
-  }
-
-  @Override
-  public boolean addAll(int index, Collection<?> c) {
-    throw new UnsupportedOperationException("ArrayLike is immutable");
-  }
-
-  @Override
-  public boolean removeAll(Collection<?> c) {
-    throw new UnsupportedOperationException("ArrayLike is immutable");
-  }
-
-  @Override
-  public boolean retainAll(Collection<?> c) {
-    throw new UnsupportedOperationException("ArrayLike is immutable");
-  }
-
-  @Override
-  public void clear() {
-    throw new UnsupportedOperationException("ArrayLike is immutable");
-  }
-
-  @Override
-  public Object get(int index) {
-    return delegate.get(index);
-  }
-
-  @Override
-  public Object set(int index, Object element) {
-    throw new UnsupportedOperationException("ArrayLike is immutable");
-  }
-
-  @Override
-  public void add(int index, Object element) {
-    throw new UnsupportedOperationException("ArrayLike is immutable");
-  }
-
-  @Override
-  public Object remove(int index) {
-    throw new UnsupportedOperationException("ArrayLike is immutable");
-  }
-
-  @Override
-  public int indexOf(Object o) {
-    return delegate.indexOf(o);
-  }
-
-  @Override
-  public int lastIndexOf(Object o) {
-    return delegate.lastIndexOf(o);
-  }
-
-  @Override
-  public ListIterator<Object> listIterator() {
-    return delegate.listIterator();
-  }
-
-  @Override
-  public ListIterator<Object> listIterator(int index) {
-    return delegate.listIterator(index);
-  }
-
-  @Override
-  public List<Object> subList(int fromIndex, int toIndex) {
-    return delegate.subList(fromIndex, toIndex);
-  }
-
-  @Override
-  public String toString() {
-    return Arrays.toString(delegate.toArray());
-  }
-
-  @Override
-  public boolean equals(Object other) {
-    if (this == other) {
-      return true;
-    }
-
-    if (other instanceof Iterable) {
-      int i = 0;
-
-      for (Object item : (Iterable) other) {
-        if (i >= delegate.size()) {
-          return false;
-        }
-        else if (!Objects.equals(item, delegate.get(i))) {
-          return false;
-        }
-
-        i++;
-      }
-
-      if (i != delegate.size()) {
-        return false;
-      }
-
-      return false;
-    }
-
-    return false;
-  }
-
-  public static boolean isEligible(Object data) {
-    return data != null && (data instanceof Iterable || data.getClass().isArray());
-  }
+	public static boolean isArray(final Object data) {
+		return data != null && (data instanceof Iterable || data.getClass().isArray());
+	}
 }
