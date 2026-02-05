@@ -14,34 +14,31 @@ public final class JsonLogicParser {
 		try { return parse(json, "$"); } catch (final Exception e) { throw new JsonLogicParseException(e, "$"); }
 	}
 
-	private static List<Object> parse(final List<?> arguments, final String jsonPath) throws JsonLogicParseException {
-		final var size = arguments.size();
-		final var ret = new Object[size];
-		var idx=0;
-		for (final var element : arguments) { ret[idx] = parse(element, jsonPath+" ["+idx+"]"); idx++; }
-		return Arrays.asList(ret);
-	}
-
-	public static JsonLogicNode parseMap(final Map<?,?> map, final String jsonPath) throws JsonLogicParseException {
+	private static JsonLogicNode parseMap(final Map<Object,Object> map, final String jsonPath) throws JsonLogicParseException {
 		// Handle objects & variables
 		if (map.size() != 1) throw new JsonLogicParseException("objects must have exactly 1 key defined, found " + map.size(), jsonPath);
 		final var key = map.keySet().iterator().next().toString().toLowerCase();
 		final var argumentNode = parse(map.get(key), String.format("%s.%s", jsonPath, key));
 
-		List<Object> arguments;
+		final List<Object> arguments;
 		// Always coerce single-argument operations into a JsonLogicArray with a single element.
-		if(argumentNode instanceof final List t) arguments = parse (t, jsonPath);
-		else                                     arguments = Collections.singletonList(parse(argumentNode, jsonPath+" ["+0+"]"));
+		if(argumentNode instanceof final List<?> t) {
+			final var argSize = t.size();
+			final var argRet  = new Object[argSize];
+			var idx=0;
+			for (final var element : t) { argRet[idx] = parse(element, jsonPath+" ["+idx+"]"); idx++; }
+			arguments = Arrays.asList(argRet);
+		}
+		else arguments = Collections.singletonList(parse(argumentNode, jsonPath+" ["+0+"]"));
 
 		// Special case for variable handling
 		if ("var".equals(key)) {
-			final var defaultValue = arguments.size() > 1 ? arguments.get(1) : null;
+			final var  defaultValue =    arguments.size() > 1 ?        arguments.get(1) : null;
 			return new JsonLogicVariable(arguments.size() < 1 ? null : arguments.get(0), defaultValue);
 		}
 		// Handle regular operations
 		return new JsonLogicOperation(key, arguments);
 	}
-
 
 	public static Object parse(final Object raw, final String jsonPath) throws JsonLogicParseException {
 		// Handle primitives
@@ -52,8 +49,8 @@ public final class JsonLogicParser {
 		if(plain instanceof final Boolean            t) return t;
 		if(plain instanceof final List<?>            t) return t;
 		if(plain instanceof final JsonLogicOperation t) return t;
-		if(plain instanceof final Map<?,?>           t) return parseMap(t, jsonPath);
-		if(plain.getClass().isPrimitive()       ) return plain;
+		if(plain instanceof final Map                t) return parseMap(t, jsonPath);
+		if(plain.getClass().isPrimitive()             ) return plain;
 		throw new IllegalStateException("parse({"+plain.getClass().getCanonicalName()+"})");
 	}
 }

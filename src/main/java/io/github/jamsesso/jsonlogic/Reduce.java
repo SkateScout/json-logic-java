@@ -8,10 +8,8 @@ import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluationException;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluator;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicExpressionFI;
 
-public record Reduce(Reducer reducer, int maxArguments, int minArguments) implements JsonLogicExpressionFI {
-	public static interface Reducer extends BiFunction<Double, Double, Double> { }
-
-	private static Reducer R_MINUS = (a, b) -> a - b;
+public record Reduce(BiFunction<Double, Double, Double> reducer, int maxArguments, int minArguments) implements JsonLogicExpressionFI {
+	private static BiFunction<Double, Double, Double> R_MINUS = (a, b) -> a - b;
 
 	public static Map<String, Reduce> FUNCTIONS = Map.of(
 			"-"  , new Reduce(R_MINUS        , 0, 1),
@@ -30,7 +28,7 @@ public record Reduce(Reducer reducer, int maxArguments, int minArguments) implem
 		if(size < minArguments) return null;
 		Double accumulator = null;
 		for (var i=0; i < size; i++) {
-			if(!(evaluator.asDouble(args.get(i), jsonPath+"["+(i)+"]") instanceof final Double cur)) return null;
+			if(!(evaluator.asDouble(args.get(i), jsonPath+"["+i+"]") instanceof final Double cur)) return null;
 			if(i > 0) { accumulator = reducer.apply(accumulator, cur); continue; }
 			accumulator = cur;
 			if(R_MINUS == reducer && size == 1) return -accumulator.doubleValue();
