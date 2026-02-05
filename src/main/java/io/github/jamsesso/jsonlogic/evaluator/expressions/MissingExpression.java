@@ -25,7 +25,6 @@ public record MissingExpression(boolean isSome) implements JsonLogicExpressionFI
 		if(isSome && (!ArrayLike.isList(arguments.get(1)) || (null == (someCnt = evaluator.asDouble(args.get(0), jsonPath)))))
 			throw new JsonLogicEvaluationException("missing_some expects first argument to be an integer and the second argument to be an array", jsonPath);
 
-
 		if (!MapLike.isEligible(evaluator.data())) return (isSome ? (someCnt.intValue() <= 0 ? Collections.EMPTY_LIST : arguments.get(1)) : arguments);
 
 		final var map          = MapLike.asMap(evaluator.data());

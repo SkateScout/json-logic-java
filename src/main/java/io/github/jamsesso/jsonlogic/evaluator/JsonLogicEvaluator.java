@@ -48,7 +48,7 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 		if(p0 instanceof final JsonLogicVariable v) {
 			if (null == data) return evaluate(v.defaultValue(), jsonPath + "[1]");
 			final var key = evaluate(v.key(), jsonPath + ".var" + "[0]");
-			var result = JsonPath.evaluate(key, jsonPath, data);
+			final var result = JsonPath.evaluate(key, jsonPath, data);
 			if (result == JsonPath.MISSING) return evaluate(v.defaultValue(), jsonPath + "[1]");
 			return result;
 		}

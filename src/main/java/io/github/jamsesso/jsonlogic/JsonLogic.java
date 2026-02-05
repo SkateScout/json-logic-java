@@ -16,7 +16,6 @@ import io.github.jamsesso.jsonlogic.ast.JSON;
 import io.github.jamsesso.jsonlogic.ast.JsonLogicParser;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluationException;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluator;
-import io.github.jamsesso.jsonlogic.evaluator.JsonLogicExpression;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicExpressionFI;
 import io.github.jamsesso.jsonlogic.evaluator.expressions.EqualityExpression;
 import io.github.jamsesso.jsonlogic.evaluator.expressions.MissingExpression;
@@ -40,7 +39,6 @@ public final class JsonLogic {
 
 	static {
 		final var m = new HashMap<String, JsonLogicExpressionFI>();
-		for(final var e : Reduce.FUNCTIONS.entrySet()) addOperation(m, e.getKey(), e.getValue());
 		addOperation    (m, "if"          , JsonLogic::ifExpt);	// IF
 		addOperation    (m, "?:"          , JsonLogic::ifExpt);	// TERNARY
 		addOperation    (m, ">"           , (ev, arg, json) -> evaluateBoolean(">" , (a,b)->(a >  b), ev, arg, json));
@@ -63,6 +61,13 @@ public final class JsonLogic {
 		addOperation    (m, "all"         , JsonLogic       ::all );
 		addOperation    (m, "in"          , JsonLogic       ::in);
 		addOperation    (m, "substr"      , JsonLogic       ::substr);
+		addOperation    (m, "-"           , new Reduce(Reduce.R_MINUS , 0, 1));
+		addOperation    (m, "+"           , new Reduce(Double::sum    , 0, 1));
+		addOperation    (m, "*"           , new Reduce((a, b) -> a * b, 0, 1));
+		addOperation    (m, "/"           , new Reduce((a, b) -> a / b, 2, 2));
+		addOperation    (m, "%"           , new Reduce((a, b) -> a % b, 2, 2));
+		addOperation    (m, "min"         , new Reduce(Math::min      , 0, 1));
+		addOperation    (m, "max"         , new Reduce(Math::max      , 0, 1));
 		addListOperation(m, "cat"         , a->a.stream().map(o -> o instanceof final Double t && t.toString().endsWith(".0") ? t.intValue() : o).map(Object::toString).collect(Collectors.joining()));
 		addOperation    (m, "missing"     , new MissingExpression(false));
 		addOperation    (m, "missing_some", new MissingExpression(true ));
@@ -263,12 +268,11 @@ public final class JsonLogic {
 		});
 	}
 
-	public JsonLogic addOperation(final JsonLogicExpression expression) { return addOperation(expression.key(), expression); }
-
 	public Object apply(final Object expr, final Object rawData) throws JsonLogicException {
 		if(expr instanceof final String t) return t;
 		final var evaluator = new JsonLogicEvaluator(expressions, JSON.plain(rawData));
-		return evaluator.evaluate(JsonLogicParser.parse(expr, "$"), "$");
+		final var expression = JsonLogicParser.parse(expr, "$");
+		return    evaluator.evaluate(expression, "$");
 	}
 
 	public Object apply(final String json) throws JsonLogicException {

@@ -7,9 +7,8 @@ import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluator;
 import io.github.jamsesso.jsonlogic.utils.ArrayLike;
 
 public class EqualityExpression {
-	private EqualityExpression() {
-		// Only one instance can be constructed. Use EqualityExpression.INSTANCE
-	}
+	// Only one instance can be constructed. Use EqualityExpression.INSTANCE
+	private EqualityExpression() { }
 
 	public static boolean equalityValue(final Object left, final Object right) throws JsonLogicEvaluationException {
 		// Use the loose equality matrix

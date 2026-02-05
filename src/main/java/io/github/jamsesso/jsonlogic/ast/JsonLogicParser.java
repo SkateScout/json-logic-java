@@ -1,7 +1,7 @@
 package io.github.jamsesso.jsonlogic.ast;
 
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -14,43 +14,47 @@ public final class JsonLogicParser {
 		try { return parse(json, "$"); } catch (final Exception e) { throw new JsonLogicParseException(e, "$"); }
 	}
 
-	private static JsonLogicNode parseMap(final Map<Object,Object> map, final String jsonPath) throws JsonLogicParseException {
-		// Handle objects & variables
-		if (map.size() != 1) throw new JsonLogicParseException("objects must have exactly 1 key defined, found " + map.size(), jsonPath);
-		final var key = map.keySet().iterator().next().toString().toLowerCase();
-		final var argumentNode = parse(map.get(key), String.format("%s.%s", jsonPath, key));
-
-		final List<Object> arguments;
-		// Always coerce single-argument operations into a JsonLogicArray with a single element.
-		if(argumentNode instanceof final List<?> t) {
-			final var argSize = t.size();
-			final var argRet  = new Object[argSize];
-			var idx=0;
-			for (final var element : t) { argRet[idx] = parse(element, jsonPath+" ["+idx+"]"); idx++; }
-			arguments = Arrays.asList(argRet);
-		}
-		else arguments = Collections.singletonList(parse(argumentNode, jsonPath+" ["+0+"]"));
-
-		// Special case for variable handling
-		if ("var".equals(key)) {
-			final var  defaultValue =    arguments.size() > 1 ?        arguments.get(1) : null;
-			return new JsonLogicVariable(arguments.size() < 1 ? null : arguments.get(0), defaultValue);
-		}
-		// Handle regular operations
-		return new JsonLogicOperation(key, arguments);
+	static record TODO(Object raw, String jsonPath, Object[] a, int i) {
+		public void accept(final Object v) { a[i] = v; }
 	}
 
-	public static Object parse(final Object raw, final String jsonPath) throws JsonLogicParseException {
-		// Handle primitives
-		final var plain = JSON.plain(raw);
-		if(plain == null                              ) return null;
-		if(plain instanceof final Number             t) return t;
-		if(plain instanceof final String             t) return t;
-		if(plain instanceof final Boolean            t) return t;
-		if(plain instanceof final List<?>            t) return t;
-		if(plain instanceof final JsonLogicOperation t) return t;
-		if(plain instanceof final Map                t) return parseMap(t, jsonPath);
-		if(plain.getClass().isPrimitive()             ) return plain;
-		throw new IllegalStateException("parse({"+plain.getClass().getCanonicalName()+"})");
+	public static Object parse(final Object raw, final String jsonPath_) throws JsonLogicParseException {
+		final var todo   = new LinkedList<TODO>();
+		final var result = new Object[1];
+		todo.add(new TODO(raw, jsonPath_, result, 0));
+		do {
+			final var cur      = todo.remove();
+			final var jsonPath = cur.jsonPath();
+			final var plain    = JSON.plain(cur.raw());
+			switch(plain) {
+			case null                  -> cur.accept(null);
+			case final Number        t -> cur.accept(t   );
+			case final String        t -> cur.accept(t   );
+			case final Boolean       t -> cur.accept(t   );
+			case final List<?>       t -> cur.accept(t   );
+			case final JsonLogicNode t -> cur.accept(t   );
+			case final Map<?,?>      t -> {
+				if (t.size() != 1) throw new JsonLogicParseException("objects must have exactly 1 key defined, found " + t.size(), jsonPath);
+				final var e       = t.entrySet().iterator().next();
+				final var key     = e.getKey().toString().toLowerCase();
+				final var args    = JSON.plain(e.getValue());
+				final var argsMax = "var".equals(key) ? 2 : Integer.MAX_VALUE;
+				final var argsUse = Math.min(args instanceof final List l ? l.size() : 1 , argsMax);
+				final var argRet  = new Object[argsUse];
+				if(args instanceof final List<?> l) {	// Always coerce single-argument operations into a List with a single element.
+					var idx=0;
+					for (final var element : l) { todo.add(new TODO(element, jsonPath+" ["+idx+"]", argRet, idx)); idx++;  }
+				} else                            todo.add(new TODO(args   , jsonPath+" [0]"      , argRet, 0  ));
+
+				if ("var".equals(key)) cur.accept(new JsonLogicVariable(argRet));					    // Special case for variable handling
+				else                   cur.accept(new JsonLogicOperation(key, Arrays.asList(argRet)));  // Handle regular operations
+			}
+			default -> {
+				if(!plain.getClass().isPrimitive()) throw new IllegalStateException("parse({"+plain.getClass().getCanonicalName()+"})");
+				cur.accept(plain);
+			}
+			}
+		} while(!todo.isEmpty());
+		return result[0];
 	}
 }
