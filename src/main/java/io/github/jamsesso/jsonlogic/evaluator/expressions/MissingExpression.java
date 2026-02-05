@@ -7,28 +7,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import io.github.jamsesso.jsonlogic.ast.JSON;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluationException;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluator;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicExpressionFI;
-import io.github.jamsesso.jsonlogic.utils.ArrayLike;
-import io.github.jamsesso.jsonlogic.utils.MapLike;
 
 public record MissingExpression(boolean isSome) implements JsonLogicExpressionFI {
 	@Override
 	public Object evaluate(final JsonLogicEvaluator evaluator, final List<?> args, final String jsonPath) throws JsonLogicEvaluationException {
 		if (isSome && (args.size() < 2)) throw new JsonLogicEvaluationException("missing_some expects first argument to be an integer and the second argument to be an array", jsonPath);
 		var values = evaluator.evaluate(args, jsonPath);
-		if (values.size() == 1 && ArrayLike.isList(values.get(0))) values = ArrayLike.asList(values.get(0));
+		if (values.size() == 1 && JSON.isList(values.get(0))) values = JSON.asList(values.get(0));
 		final var arguments= evaluator.evaluate(values, jsonPath);
 
 		Double someCnt = 0.;
-		if(isSome && (!ArrayLike.isList(arguments.get(1)) || (null == (someCnt = evaluator.asDouble(args.get(0), jsonPath)))))
+		if(isSome && (!JSON.isList(arguments.get(1)) || (null == (someCnt = evaluator.asDouble(args.get(0), jsonPath)))))
 			throw new JsonLogicEvaluationException("missing_some expects first argument to be an integer and the second argument to be an array", jsonPath);
 
-		if (!MapLike.isEligible(evaluator.data())) return (isSome ? (someCnt.intValue() <= 0 ? Collections.EMPTY_LIST : arguments.get(1)) : arguments);
+		if (!JSON.isMap(evaluator.data())) return (isSome ? (someCnt.intValue() <= 0 ? Collections.EMPTY_LIST : arguments.get(1)) : arguments);
 
-		final var map          = MapLike.asMap(evaluator.data());
-		final var options      = isSome ? ArrayLike.asList(arguments.get(1)) : arguments;
+		final var map          = JSON.asMap(evaluator.data());
+		final var options      = isSome ? JSON.asList(arguments.get(1)) : arguments;
 		final var providedKeys = getFlatKeys(map);
 		final var requiredKeys = new LinkedHashSet<>(options);
 		requiredKeys.removeAll(providedKeys); // Keys that I need but do not have
@@ -48,7 +47,7 @@ public record MissingExpression(boolean isSome) implements JsonLogicExpressionFI
 	private static Set<String> getFlatKeys(final Map<?,?> map, final String prefix) {
 		final var keys = new LinkedHashSet<String>();
 		for (final var entry : map.entrySet())
-			if (MapLike.isEligible(entry.getValue())) keys.addAll(getFlatKeys(MapLike.asMap(entry.getValue()), prefix + entry.getKey() + "."));
+			if (JSON.isMap(entry.getValue())) keys.addAll(getFlatKeys(JSON.asMap(entry.getValue()), prefix + entry.getKey() + "."));
 			else keys.add(prefix + entry.getKey());
 
 		return keys;

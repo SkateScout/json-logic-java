@@ -7,9 +7,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import io.github.jamsesso.jsonlogic.ast.JSON;
 import io.github.jamsesso.jsonlogic.ast.JsonLogicOperation;
 import io.github.jamsesso.jsonlogic.ast.JsonLogicVariable;
-import io.github.jamsesso.jsonlogic.utils.ArrayLike;
 
 public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions, Object data) {
 
@@ -31,7 +31,7 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 		if(p0 instanceof final String            t) return t;
 		if(p0 instanceof final Boolean           t) return t;
 		if(p0 instanceof final List<?>           t) return evaluate(t,  jsonPath);
-		if(ArrayLike.isList(p0)) return ArrayLike.asList(p0);
+		if(JSON.isList(p0)) return JSON.asList(p0);
 		if(p0.getClass().isPrimitive()      ) return p0;
 		if(p0 instanceof final JsonLogicOperation operation) {
 			final var handler = expressions.get(operation.operator());
@@ -39,7 +39,7 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 			var args = operation.arguments();
 			if(args != null && args.size() == 1 && args.get(0) instanceof final JsonLogicOperation op) {
 				final var ret = evaluate(op, jsonPath+" '"+op.operator()+"'");
-				if(ArrayLike.isList(ret)) args = ArrayLike.asList(ret);
+				if(JSON.isList(ret)) args = JSON.asList(ret);
 				else                      args = Collections.singletonList(ret);
 			}
 			// TODO generic error for parameter type, minParameter, maxParameter
@@ -60,7 +60,7 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 		final var value = evaluate(p0, jsonPath);
 		if (value instanceof final String t) try { return Double.parseDouble(t); } catch (final NumberFormatException e) { return null; }
 		if (value instanceof final Number t) return t.doubleValue();
-		if (ArrayLike.isList(value) && ArrayLike.asList(value) instanceof final List<?> l && !l.isEmpty()) return asDouble(l.get(0), jsonPath);
+		if (JSON.isList(value) && JSON.asList(value) instanceof final List<?> l && !l.isEmpty()) return asDouble(l.get(0), jsonPath);
 		return null;
 	}
 

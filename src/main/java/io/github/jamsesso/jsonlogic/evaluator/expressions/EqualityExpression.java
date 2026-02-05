@@ -2,9 +2,9 @@ package io.github.jamsesso.jsonlogic.evaluator.expressions;
 
 import java.util.List;
 
+import io.github.jamsesso.jsonlogic.ast.JSON;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluationException;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluator;
-import io.github.jamsesso.jsonlogic.utils.ArrayLike;
 
 public class EqualityExpression {
 	// Only one instance can be constructed. Use EqualityExpression.INSTANCE
@@ -27,7 +27,7 @@ public class EqualityExpression {
 		if (left instanceof final Boolean l && right instanceof final Boolean r) return r.booleanValue() == l.booleanValue();
 		if (left instanceof final Boolean l && right instanceof final Number  r) return compareNumberToBoolean(r, l);
 		if (left instanceof final Boolean l && right instanceof final String  r) return compareStringToBoolean(r, l);
-		if (left instanceof final List<?> l && right instanceof final List<?> r) return ArrayLike.equals(r, l);
+		if (left instanceof final List<?> l && right instanceof final List<?> r) return JSON.equals(r, l);
 		// Check non-truthy values
 		return !JsonLogicEvaluator.asBoolean(left) && !JsonLogicEvaluator.asBoolean(right);
 	}

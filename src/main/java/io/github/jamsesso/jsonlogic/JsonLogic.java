@@ -19,7 +19,6 @@ import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluator;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicExpressionFI;
 import io.github.jamsesso.jsonlogic.evaluator.expressions.EqualityExpression;
 import io.github.jamsesso.jsonlogic.evaluator.expressions.MissingExpression;
-import io.github.jamsesso.jsonlogic.utils.ArrayLike;
 
 public final class JsonLogic {
 	private final Map<String, Object               > parseCache  = new ConcurrentHashMap<>();
@@ -30,7 +29,7 @@ public final class JsonLogic {
 	private static void addListOperation(final Map<String, JsonLogicExpressionFI> e, final String name, final Function<List<?>, Object> function) {
 		addOperation(e, name, (JsonLogicExpressionFI) (evaluator, arguments, jsonPath) -> {
 			var values = evaluator.evaluate(arguments, jsonPath);
-			if (values.size() == 1 && ArrayLike.isList(values.get(0))) values = ArrayLike.asList(values.get(0));
+			if (values.size() == 1 && JSON.isList(values.get(0))) values = JSON.asList(values.get(0));
 			return function.apply(arguments);
 		});
 	}
@@ -96,8 +95,8 @@ public final class JsonLogic {
 
 		// Array objects can have null values according to http://jsonlogic.com/
 		if (maybeArray == null) return !isSome;
-		if (!ArrayLike.isList(maybeArray)) throw new JsonLogicEvaluationException("first argument to " + key + " must be a valid array", jsonPath + "[0]");
-		for (final Object item : ArrayLike.asList(maybeArray)) if(evaluator.scoped(item).asBoolean(arguments.get(1), jsonPath + "[1]")) return isSome;
+		if (!JSON.isList(maybeArray)) throw new JsonLogicEvaluationException("first argument to " + key + " must be a valid array", jsonPath + "[0]");
+		for (final Object item : JSON.asList(maybeArray)) if(evaluator.scoped(item).asBoolean(arguments.get(1), jsonPath + "[1]")) return isSome;
 		return !isSome;
 	}
 
@@ -118,10 +117,10 @@ public final class JsonLogic {
 		if (arguments.size() != 3) throw new JsonLogicEvaluationException("reduce expects exactly 3 arguments", jsonPath);
 		final var maybeArray  = evaluator.evaluate(arguments.get(0), jsonPath + "[0]");
 		final var accumulator = evaluator.evaluate(arguments.get(2), jsonPath + "[2]");
-		if (!ArrayLike.isList(maybeArray)) return accumulator;
+		if (!JSON.isList(maybeArray)) return accumulator;
 		final Map<String, Object> context = new HashMap<>();
 		context.put("accumulator", accumulator);
-		for (final var item : ArrayLike.asList(maybeArray)) {
+		for (final var item : JSON.asList(maybeArray)) {
 			context.put("current", item);
 			context.put("accumulator", evaluator.scoped(context).evaluate(arguments.get(1), jsonPath + "[1]"));
 		}
@@ -152,18 +151,18 @@ public final class JsonLogic {
 	private static List<?> filter         (final JsonLogicEvaluator evaluator, final List<?> arguments, final String jsonPath) throws JsonLogicEvaluationException {
 		if (arguments.size() != 2) throw new JsonLogicEvaluationException("filter expects exactly 2 arguments", jsonPath);
 		final var maybeArray = evaluator.evaluate(arguments.get(0), jsonPath + "[0]");
-		if (!ArrayLike.isList(maybeArray)) throw new JsonLogicEvaluationException("first argument to filter must be a valid array", jsonPath + "[0]");
+		if (!JSON.isList(maybeArray)) throw new JsonLogicEvaluationException("first argument to filter must be a valid array", jsonPath + "[0]");
 		final var result = new ArrayList<>();
 		final var filter = arguments.get(1);
-		for (final Object item : ArrayLike.asList(maybeArray)) if(evaluator.scoped(item).asBoolean(filter, jsonPath + "[1]")) result.add(item);
+		for (final Object item : JSON.asList(maybeArray)) if(evaluator.scoped(item).asBoolean(filter, jsonPath + "[1]")) result.add(item);
 		return result;
 	}
 
 	private static List<?> map            (final JsonLogicEvaluator evaluator, final List<?> arguments, final String jsonPath) throws JsonLogicEvaluationException {
 		if (arguments.size() != 2)  throw new JsonLogicEvaluationException("map expects exactly 2 arguments", jsonPath);
 		final var maybeArray = evaluator.evaluate(arguments.get(0), jsonPath + "[0]");
-		if (!ArrayLike.isList(maybeArray)) return Collections.emptyList();
-		final var list = ArrayLike.asList(maybeArray);
+		if (!JSON.isList(maybeArray)) return Collections.emptyList();
+		final var list = JSON.asList(maybeArray);
 		final var ret = new Object[list.size()];
 		var index = 0;
 		for (final Object item : list) ret[index++] = evaluator.scoped(item).evaluate(arguments.get(1), jsonPath + "[1]");
@@ -174,8 +173,8 @@ public final class JsonLogic {
 		if (arguments.size() != 2) throw new JsonLogicEvaluationException("all expects exactly 2 arguments", jsonPath);
 		final var maybeArray = evaluator.evaluate(arguments.get(0), jsonPath + "[0]");
 		if (maybeArray == null) return false;
-		if (!ArrayLike.isList(maybeArray)) throw new JsonLogicEvaluationException("first argument to all must be a valid array", jsonPath);
-		final var array = ArrayLike.asList(maybeArray);
+		if (!JSON.isList(maybeArray)) throw new JsonLogicEvaluationException("first argument to all must be a valid array", jsonPath);
+		final var array = JSON.asList(maybeArray);
 		if (array.size() < 1) return false;
 		final var index = 1;
 		for (final Object item : array) if(!evaluator.scoped(item).asBoolean(arguments.get(1),  String.format("%s[%d]", jsonPath, index))) return false;
@@ -188,7 +187,7 @@ public final class JsonLogic {
 		final var needle   = ev.evaluate(arguments.get(0), jsonPath+"[0]");
 		final var haystack = ev.evaluate(arguments.get(1), jsonPath+"[1]");
 		if (arguments.get(1) instanceof final String t) return (needle == null ? false : t.contains(needle.toString()));
-		return (ArrayLike.isList(haystack) ? ArrayLike.asList(haystack).contains(needle) : false);
+		return (JSON.isList(haystack) ? JSON.asList(haystack).contains(needle) : false);
 	}
 
 	private static Object  log            (final JsonLogicEvaluator evaluator, final List<?> arguments, final String jsonPath) throws JsonLogicEvaluationException {
@@ -224,7 +223,7 @@ public final class JsonLogic {
 		while(!todo.isEmpty()) {
 			var e = todo.removeFirst();
 			e = evaluator.evaluate(e, jsonPath+"["+(idx++)+"]");
-			if(ArrayLike.isList(e) && ArrayLike.asList(e) instanceof final List<?> l) {
+			if(JSON.isList(e) && JSON.asList(e) instanceof final List<?> l) {
 				for(var i = l.size()-1; i>=0; i--)  todo.add(0, l.get(i));
 				continue;
 			}
@@ -255,7 +254,7 @@ public final class JsonLogic {
 	public JsonLogic addListOperation(final String name, final Function<List<?>, Object> function) {
 		return addOperation(name, (JsonLogicExpressionFI) (evaluator, arguments, jsonPath) -> {
 			var values = evaluator.evaluate(arguments, jsonPath);
-			if (values.size() == 1 && ArrayLike.isList(values.get(0))) values = ArrayLike.asList(values.get(0));
+			if (values.size() == 1 && JSON.isList(values.get(0))) values = JSON.asList(values.get(0));
 			return function.apply(arguments);
 		});
 	}
@@ -263,7 +262,7 @@ public final class JsonLogic {
 	public JsonLogic addOperation(final String name, final Function<Object[], Object> function) {
 		return addOperation(name, (JsonLogicExpressionFI) (evaluator, arguments, jsonPath) -> {
 			var values = evaluator.evaluate(arguments, jsonPath);
-			if (values.size() == 1 && ArrayLike.isList(values.get(0))) values = ArrayLike.asList(values.get(0));
+			if (values.size() == 1 && JSON.isList(values.get(0))) values = JSON.asList(values.get(0));
 			return function.apply(arguments.toArray());
 		});
 	}

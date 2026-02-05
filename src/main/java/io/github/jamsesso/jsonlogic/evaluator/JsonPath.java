@@ -3,7 +3,6 @@ package io.github.jamsesso.jsonlogic.evaluator;
 import java.util.Map;
 
 import io.github.jamsesso.jsonlogic.ast.JSON;
-import io.github.jamsesso.jsonlogic.utils.ArrayLike;
 
 public class JsonPath {
 	private JsonPath()  { }
@@ -11,14 +10,14 @@ public class JsonPath {
 	public static final Object MISSING = new Object();
 
 	private static Object byIndex(final int index, final Object data) {
-		var list = ArrayLike.asList(data);
+		final var list = JSON.asList(data);
 		return (list == null || index < 0 || index >= list.size() ? MISSING : list.get(index));
 	}
 
 	private static Object partial(final String key, final Object result, final String jsonPath) throws JsonLogicEvaluationException {
 		final var data = JSON.plain(result);
 		if(data == null) return MISSING;
-		if (ArrayLike.isList(data)) {
+		if (JSON.isList(data)) {
 			final int index; try { index = Integer.parseInt(key); } catch (final NumberFormatException e) { throw new JsonLogicEvaluationException(e, jsonPath); }
 			return byIndex(index, data);
 		}
@@ -29,7 +28,7 @@ public class JsonPath {
 	public static Object evaluate(final Object key, String jsonPath, final Object data) throws JsonLogicEvaluationException {
 		jsonPath = jsonPath + ".var";
 		if (key == null) return data;
-		if (key instanceof final Number idx) return (ArrayLike.isList(data) ? byIndex(idx.intValue(), data) : MISSING);
+		if (key instanceof final Number idx) return (JSON.isList(data) ? byIndex(idx.intValue(), data) : MISSING);
 		// Handle the case when the key is a string, potentially referencing an infinitely-deep map: x.y.z
 		if (key instanceof final String name) {
 			if (name.isEmpty()) return data;
