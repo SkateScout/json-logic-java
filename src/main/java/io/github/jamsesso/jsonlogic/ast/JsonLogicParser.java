@@ -10,24 +10,22 @@ public final class JsonLogicParser {
 	private JsonLogicParser() { }
 
 	public static Object parse(final String jsonText) throws JsonLogicParseException {
-		final var json = JSON.parse(jsonText);
-		try { return parse(json, "$"); } catch (final Exception e) { throw new JsonLogicParseException(e, "$"); }
+		try { return parse(JSON.parse(jsonText), "$"); } catch (final Exception e) { throw new JsonLogicParseException(e, "$"); }
 	}
 
 	public static Object parse(final Object raw, final String jsonPath_) throws JsonLogicParseException {
-		final var todo   = new LinkedList<Deferred>();
 		final var result = new Object[1];
-		todo.add(new Deferred(raw, jsonPath_, result, 0));
+		final var todo   = new LinkedList<>(List.of(new Deferred(raw, jsonPath_, result, 0)));
 		do {
 			final var cur      = todo.remove();
 			final var jsonPath = cur.jsonPath();
 			final var plain    = JSON.plain(cur.raw());
 			switch(plain) {
-			case null                  -> cur.accept(null);
-			case final Number        t -> cur.accept(t   );
-			case final String        t -> cur.accept(t   );
-			case final Boolean       t -> cur.accept(t   );
-			case final List<?>       t -> cur.accept(t   );
+			case null                  -> cur.accept(plain);
+			case final Number        _ -> cur.accept(plain);
+			case final String        _ -> cur.accept(plain);
+			case final Boolean       _ -> cur.accept(plain);
+			case final List<?>       _ -> cur.accept(plain);
 			case final Map<?,?>      t -> {
 				if (t.size() != 1) throw new JsonLogicParseException("objects must have exactly 1 key defined, found " + t.size(), jsonPath);
 				final var e       = t.entrySet().iterator().next();

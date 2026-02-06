@@ -78,14 +78,14 @@ public final class JsonLogic {
 	}
 
 	private static boolean evaluateBoolean(final String name, final BiPredicate<Double, Double> compare, final JsonLogicEvaluator evaluator, final List<?> arguments, final String jsonPath) throws JsonLogicEvaluationException {
-		final var n = Math.min(arguments.size(), 3);
-		if (n < 2) throw new JsonLogicEvaluationException("'"+name + "' requires at least 2 arguments", jsonPath);
-		if (n > 3) throw new JsonLogicEvaluationException("'"+name + "' requires at most 3 arguments", jsonPath);
+		final var size = arguments.size();
+		if (size < 2) throw new JsonLogicEvaluationException("'"+name + "' requires at least 2 arguments", jsonPath);
+		if (size > 3) throw new JsonLogicEvaluationException("'"+name + "' requires at most 3 arguments", jsonPath);
 		// Convert the arguments to doubles
 		// If regular comparisons fail also between fails
-		if(!(evaluator.asDouble(arguments.get(0), String.format("%s[0]", jsonPath)) instanceof final Double a) || !(evaluator.asDouble(arguments.get(1), String.format("%s[1]", jsonPath)) instanceof final Double b) || !compare.test(a, b)) return false;
-		// Handle between comparisons
-		if (arguments.size() == 2) return true;
+		if(!(evaluator.asDouble(arguments.get(0), String.format("%s[0]", jsonPath)) instanceof final Double a)
+				|| !(evaluator.asDouble(arguments.get(1), String.format("%s[1]", jsonPath)) instanceof final Double b) || !compare.test(a, b)) return false;
+		if (size == 2) return true; // Handle between comparisons is size = 3
 		if(!(evaluator.asDouble(arguments.get(2), String.format("%s[2]", jsonPath)) instanceof final Double c)) return false;
 		return compare.test(b, c);
 	}
