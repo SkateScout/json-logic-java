@@ -1,5 +1,6 @@
 package io.github.jamsesso.jsonlogic.evaluator;
 
+import java.util.List;
 import java.util.Map;
 
 import io.github.jamsesso.jsonlogic.ast.JSON;
@@ -9,32 +10,35 @@ public class JsonPath {
 	/** Sentinel object to represent a missing value (for internal use only). */
 	public static final Object MISSING = new Object();
 
-	private static Object byIndex(final int index, final Object data) {
-		final var list = JSON.asList(data);
-		return (list == null || index < 0 || index >= list.size() ? MISSING : list.get(index));
-	}
-
-	private static Object partial(final String key, final Object result, final String jsonPath) throws JsonLogicEvaluationException {
-		final var data = JSON.plain(result);
-		if(data == null) return MISSING;
-		if (JSON.isList(data)) {
-			final int index; try { index = Integer.parseInt(key); } catch (final NumberFormatException e) { throw new JsonLogicEvaluationException(e, jsonPath); }
-			return byIndex(index, data);
-		}
-		if (data instanceof final Map map) return (map.containsKey(key) ? map.get(key) : MISSING);
-		throw new JsonLogicEvaluationException("Variable type "+data.getClass().getCanonicalName()+" unsupported", jsonPath);
-	}
-
-	public static Object evaluate(final Object key, String jsonPath, final Object data) throws JsonLogicEvaluationException {
+	public static Object evaluate(final Object keyParam, String jsonPath, final Object data) throws JsonLogicEvaluationException {
 		jsonPath = jsonPath + ".var";
-		if (key == null) return data;
-		if (key instanceof final Number idx) return (JSON.isList(data) ? byIndex(idx.intValue(), data) : MISSING);
+		if (keyParam  == null) return data;
+		if (data == null) return MISSING;
+		if (keyParam instanceof final Number idx) {
+			final var index = idx.intValue();
+			if(index < 0 || !JSON.isList(data)) return MISSING;
+			return(JSON.asList(data) instanceof final List l && index < l.size() ? l.get(index) : MISSING);
+		}
 		// Handle the case when the key is a string, potentially referencing an infinitely-deep map: x.y.z
-		if (key instanceof final String name) {
+		if (keyParam instanceof final String name) {
 			if (name.isEmpty()) return data;
 			final var keys = name.split("\\.");
 			var result = data;
-			for (final var subKey : keys) if (null == (result = partial(subKey, result, jsonPath + "[0]")) || MISSING == result) return result;
+			jsonPath = jsonPath + "[0]";
+			for (final var key : keys) {
+				if(result == null || result == MISSING) return result;
+				result = JSON.plain(result);
+				if (JSON.isList(result)) {
+					final int index;
+					try { index = Integer.parseInt(key); } catch (final NumberFormatException e) { throw new JsonLogicEvaluationException(e, jsonPath); }
+					if((index < 0) || !(JSON.asList(result) instanceof final List l) || (index >= l.size())) return MISSING;
+					result =  l.get(index);
+				} else if (result instanceof final Map map) {
+					if(!map.containsKey(key)) return MISSING;
+					result = map.get(key);
+				} else throw new JsonLogicEvaluationException("Variable type "+result.getClass().getCanonicalName()+" unsupported", jsonPath);
+
+			}
 			return result;
 		}
 		throw new JsonLogicEvaluationException("var first argument must be null, number, or string", jsonPath + "[0]");

@@ -18,10 +18,10 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 	public JsonLogicEvaluator { expressions = Collections.unmodifiableMap(expressions); }
 	public JsonLogicEvaluator scoped(final Object scopeData) { return new JsonLogicEvaluator(expressions, number, scopeData); }
 
-	record Value  (Object[] val                 , Deferred d) { void run() { d.accept(val[0]); } }
-	record Varable(Object[] key, Object fallback, Deferred d) { }
-
-	record Handler(JsonLogicExpressionFI h, Object[] result, Deferred d, String jsonPath) {
+	sealed interface Todo permits Value, Varable, Handler { }
+	record Value  (Object[] val                 , Deferred d) implements Todo { void run() { d.accept(val[0]); } }
+	record Varable(Object[] key, Object fallback, Deferred d) implements Todo { }
+	record Handler(JsonLogicExpressionFI h, Object[] result, Deferred d, String jsonPath) implements Todo {
 		void run(final JsonLogicEvaluator e) throws JsonLogicEvaluationException {
 			final var r = result[0];
 			final var args = (JSON.isList(r) ? JSON.asList(r) : Collections.singletonList(r));
@@ -50,12 +50,12 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 			if(next instanceof final Deferred cur) {
 				final var p0       = cur.raw();
 				final var jsonPath = cur.jsonPath();
-				if(p0 == null                             ) { cur.accept(null); continue; }
-				if(p0 instanceof final Number            t) { cur.accept( t ); continue; }
-				if(p0 instanceof final String            t) { cur.accept( t ); continue; }
-				if(p0 instanceof final Boolean           t) { cur.accept( t ); continue; }
-				if(p0.getClass().isPrimitive()            ) { cur.accept( p0); continue; }
-				if(p0 instanceof final List<?>           t) {
+				if(p0 == null                   ) { cur.accept(null); continue; }
+				if(p0 instanceof final Number  t) { cur.accept( t ); continue; }
+				if(p0 instanceof final String  t) { cur.accept( t ); continue; }
+				if(p0 instanceof final Boolean t) { cur.accept( t ); continue; }
+				if(p0.getClass().isPrimitive()  ) { cur.accept( p0); continue; }
+				if(p0 instanceof final List<?> t) {
 					var index = 0;
 					final var ret = new Object[t.size()];
 					for(final var element : t) { todo.addFirst(new Deferred(element, jsonPath + "[" + index+ "]", ret, index)); index++; }
@@ -98,7 +98,6 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 		return (List<Object>)evaluate((Object)t, jsonPath);
 	}
 
-
 	public Number asNumber(final Object p0, final String jsonPath) throws JsonLogicEvaluationException {
 		final var value = evaluate(p0, jsonPath);
 		if (value instanceof final String t) try { return Double.parseDouble(t); } catch (final NumberFormatException e) { return null; }
@@ -117,16 +116,15 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 
 	public static boolean asBoolean(final Object value) {
 		if (value == null) return false;
-		if (value instanceof final Boolean v) return v;
-		if (value instanceof final Number  n) {
-			if (n instanceof final Double  d) { if (d.isNaN     ()) return false; if (d.isInfinite()) return true; }
-			if (n instanceof final Float   f) { if (f.isNaN     ()) return false; if (f.isInfinite()) return true; }
+		if (value instanceof final String     s) return !s.isEmpty();
+		if (value instanceof final Boolean    v) return v;
+		if (value instanceof final Number     n) {
+			if (n instanceof final Double     d) return(!d.isNaN() && (d.isInfinite() || d.doubleValue() != 0.0));
+			if (n instanceof final Float      f) return(!f.isNaN() && (f.isInfinite() || f.floatValue () != 0.0));
 			return n.doubleValue() != 0.0;
 		}
-		if (value instanceof final String s) return !s.isEmpty();
 		if (value instanceof final Collection c) return !c.isEmpty();
-		if (value.getClass().isArray()) return Array.getLength(value) > 0;
-		return true;
+		return(!value.getClass().isArray() || Array.getLength(value) > 0);
 	}
 
 	public boolean asBoolean(final Object p0, final String jsonPath) throws JsonLogicEvaluationException { return asBoolean(evaluate(p0, jsonPath)); }
