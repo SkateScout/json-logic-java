@@ -14,14 +14,10 @@ public final class JsonLogicParser {
 		try { return parse(json, "$"); } catch (final Exception e) { throw new JsonLogicParseException(e, "$"); }
 	}
 
-	static record TODO(Object raw, String jsonPath, Object[] a, int i) {
-		public void accept(final Object v) { a[i] = v; }
-	}
-
 	public static Object parse(final Object raw, final String jsonPath_) throws JsonLogicParseException {
-		final var todo   = new LinkedList<TODO>();
+		final var todo   = new LinkedList<Deferred>();
 		final var result = new Object[1];
-		todo.add(new TODO(raw, jsonPath_, result, 0));
+		todo.add(new Deferred(raw, jsonPath_, result, 0));
 		do {
 			final var cur      = todo.remove();
 			final var jsonPath = cur.jsonPath();
@@ -32,7 +28,6 @@ public final class JsonLogicParser {
 			case final String        t -> cur.accept(t   );
 			case final Boolean       t -> cur.accept(t   );
 			case final List<?>       t -> cur.accept(t   );
-			case final JsonLogicNode t -> cur.accept(t   );
 			case final Map<?,?>      t -> {
 				if (t.size() != 1) throw new JsonLogicParseException("objects must have exactly 1 key defined, found " + t.size(), jsonPath);
 				final var e       = t.entrySet().iterator().next();
@@ -43,8 +38,8 @@ public final class JsonLogicParser {
 				final var argRet  = new Object[argsUse];
 				if(args instanceof final List<?> l) {	// Always coerce single-argument operations into a List with a single element.
 					var idx=0;
-					for (final var element : l) { todo.add(new TODO(element, jsonPath+" ["+idx+"]", argRet, idx)); idx++;  }
-				} else                            todo.add(new TODO(args   , jsonPath+" [0]"      , argRet, 0  ));
+					for (final var element : l) { todo.add(new Deferred(element, jsonPath+" ["+idx+"]", argRet, idx)); idx++;  }
+				} else                            todo.add(new Deferred(args   , jsonPath+" [0]"      , argRet, 0  ));
 
 				if ("var".equals(key)) cur.accept(new JsonLogicVariable(argRet));					    // Special case for variable handling
 				else                   cur.accept(new JsonLogicOperation(key, Arrays.asList(argRet)));  // Handle regular operations

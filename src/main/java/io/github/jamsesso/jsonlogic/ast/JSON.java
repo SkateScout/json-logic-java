@@ -2,6 +2,7 @@ package io.github.jamsesso.jsonlogic.ast;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -34,6 +35,7 @@ public class JSON {
 	@SuppressWarnings("unchecked")
 	public static List<Object> asList(final Object data) {
 		if (data instanceof final List l) return l;
+		if(data instanceof final Object[] l) return Arrays.asList(l);
 		if (data != null && data.getClass().isArray()) {
 			System.out.println("asList({"+data.getClass().getCanonicalName()+"})");
 			final var len = Array.getLength(data);
