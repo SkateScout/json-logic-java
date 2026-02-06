@@ -2,6 +2,7 @@ package io.github.jamsesso.jsonlogic.evaluator.expressions;
 
 import java.util.List;
 
+import io.github.jamsesso.jsonlogic.NumericDouble;
 import io.github.jamsesso.jsonlogic.ast.JSON;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluationException;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluator;
@@ -16,12 +17,12 @@ public class EqualityExpression {
 		if ((left ==         right) || (left == null && right == null)) return true;
 		if (left == null || right == null) return false;
 		// Check numeric loose equality
-		if (left instanceof final Number  l && right instanceof final Number  r) return Double.valueOf(l.doubleValue()).equals(r.doubleValue());
-		if (left instanceof final Number  l && right instanceof final String  r) return compareNumberToString(l, r);
+		if (left instanceof final Number  l && right instanceof final Number  r) return NumericDouble.ONCE.EQ (l, r);
+		if (left instanceof final Number  l && right instanceof final String  r) return compareNumberToString (l, r);
 		if (left instanceof final Number  l && right instanceof final Boolean r) return compareNumberToBoolean(l, r);
 		// Check string loose equality
 		if (left instanceof final String  l && right instanceof final String  r) return l.equals(r);
-		if (left instanceof final String  l && right instanceof final Number  r) return compareNumberToString(r, l);
+		if (left instanceof final String  l && right instanceof final Number  r) return compareNumberToString (r, l);
 		if (left instanceof final String  l && right instanceof final Boolean r) return compareStringToBoolean(l, r);
 		// Check boolean loose equality
 		if (left instanceof final Boolean l && right instanceof final Boolean r) return r.booleanValue() == l.booleanValue();

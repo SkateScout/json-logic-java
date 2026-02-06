@@ -20,8 +20,8 @@ public record MissingExpression(boolean isSome) implements JsonLogicExpressionFI
 		if (values.size() == 1 && JSON.isList(values.get(0))) values = JSON.asList(values.get(0));
 		final var arguments= evaluator.evaluate(values, jsonPath);
 
-		Double someCnt = 0.;
-		if(isSome && (!JSON.isList(arguments.get(1)) || (null == (someCnt = evaluator.asDouble(args.get(0), jsonPath)))))
+		Number someCnt = 0.;
+		if(isSome && (!JSON.isList(arguments.get(1)) || (null == (someCnt = evaluator.asNumber(args.get(0), jsonPath)))))
 			throw new JsonLogicEvaluationException("missing_some expects first argument to be an integer and the second argument to be an array", jsonPath);
 
 		if (!JSON.isMap(evaluator.data())) return (isSome ? (someCnt.intValue() <= 0 ? Collections.EMPTY_LIST : arguments.get(1)) : arguments);
@@ -36,11 +36,8 @@ public record MissingExpression(boolean isSome) implements JsonLogicExpressionFI
 	}
 
 	/**
-	 * Given a map structure such as:
-	 * {a: {b: 1}, c: 2}
-	 *
-	 * This method will return the following set:
-	 * ["a.b", "c"]
+	 * Given a map structure such as:             {a: {b: 1}, c: 2}
+	 * This method will return the following set: ["a.b", "c"]
 	 */
 	private static Set<String> getFlatKeys(final Map<?,?> map) { return getFlatKeys(map, ""); }
 

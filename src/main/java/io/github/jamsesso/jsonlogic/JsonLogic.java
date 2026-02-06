@@ -35,6 +35,8 @@ public final class JsonLogic {
 	}
 
 	private static final Map<String, JsonLogicExpressionFI> defaultExpressions;
+	public  static final INumeric NUMBER = NumericDouble.ONCE;
+	public               INumeric number = NUMBER;
 
 	static {
 		final var m = new HashMap<String, JsonLogicExpressionFI>();
@@ -60,13 +62,13 @@ public final class JsonLogic {
 		addOperation    (m, "all"         , JsonLogic       ::all );
 		addOperation    (m, "in"          , JsonLogic       ::in);
 		addOperation    (m, "substr"      , JsonLogic       ::substr);
-		addOperation    (m, "-"           , new Reduce(Reduce.R_MINUS , 0, 1));
-		addOperation    (m, "+"           , new Reduce(Double::sum    , 0, 1));
-		addOperation    (m, "*"           , new Reduce((a, b) -> a * b, 0, 1));
-		addOperation    (m, "/"           , new Reduce((a, b) -> a / b, 2, 2));
-		addOperation    (m, "%"           , new Reduce((a, b) -> a % b, 2, 2));
-		addOperation    (m, "min"         , new Reduce(Math::min      , 0, 1));
-		addOperation    (m, "max"         , new Reduce(Math::max      , 0, 1));
+		addOperation    (m, "-"           , new Reduce(NUMBER::MINUS  , 0, 1, true ));
+		addOperation    (m, "+"           , new Reduce(NUMBER::SUM    , 0, 1, false));
+		addOperation    (m, "*"           , new Reduce(NUMBER::MUL    , 0, 1, false));
+		addOperation    (m, "/"           , new Reduce(NUMBER::DIV    , 2, 2, false));
+		addOperation    (m, "%"           , new Reduce(NUMBER::MOD    , 2, 2, false));
+		addOperation    (m, "min"         , new Reduce(NUMBER::MIN    , 0, 1, false));
+		addOperation    (m, "max"         , new Reduce(NUMBER::MAX    , 0, 1, false));
 		addListOperation(m, "cat"         , a->a.stream().map(o -> o instanceof final Double t && t.toString().endsWith(".0") ? t.intValue() : o).map(Object::toString).collect(Collectors.joining()));
 		addOperation    (m, "missing"     , new MissingExpression(false));
 		addOperation    (m, "missing_some", new MissingExpression(true ));
@@ -129,7 +131,7 @@ public final class JsonLogic {
 
 	private static String  substr         (final JsonLogicEvaluator evaluator, final List<?> arguments, final String jsonPath) throws JsonLogicEvaluationException {
 		if (arguments.size() < 2 || arguments.size() > 3) throw new JsonLogicEvaluationException("substr expects 2 or 3 arguments", jsonPath);
-		if (!(evaluator.asDouble(arguments.get(1), jsonPath) instanceof final Double arg1)) throw new JsonLogicEvaluationException("second argument to substr must be a number", jsonPath + "[1]");
+		if (!(evaluator.asNumber(arguments.get(1), jsonPath) instanceof final Number arg1)) throw new JsonLogicEvaluationException("second argument to substr must be a number", jsonPath + "[1]");
 		final var value = evaluator.evaluate(arguments.get(0), jsonPath).toString();
 		final var len = value.length();
 		if (arguments.size() == 2) {
@@ -139,7 +141,7 @@ public final class JsonLogic {
 			if (startIndex < 0) return "";
 			return value.substring(startIndex, endIndex);
 		}
-		if (!(evaluator.asDouble(arguments.get(2), jsonPath) instanceof final Double arg2)) throw new JsonLogicEvaluationException("third argument to substr must be an integer", jsonPath + "[2]");
+		if (!(evaluator.asNumber(arguments.get(2), jsonPath) instanceof final Number arg2)) throw new JsonLogicEvaluationException("third argument to substr must be an integer", jsonPath + "[2]");
 		var startIndex = arg1.intValue();
 		if (startIndex < 0) startIndex = value.length() + startIndex;
 		var endIndex = arg2.intValue();
@@ -269,14 +271,14 @@ public final class JsonLogic {
 
 	public Object apply(final Object expr, final Object rawData) throws JsonLogicException {
 		if(expr instanceof final String t) return t;
-		final var evaluator = new JsonLogicEvaluator(expressions, JSON.plain(rawData));
+		final var evaluator = new JsonLogicEvaluator(expressions, number, JSON.plain(rawData));
 		final var expression = JsonLogicParser.parse(expr, "$");
 		return    evaluator.evaluate(expression, "$");
 	}
 
 	public Object apply(final String json) throws JsonLogicException {
 		if (!parseCache.containsKey(json)) parseCache.put(json, JsonLogicParser.parse(json));
-		final var evaluator = new JsonLogicEvaluator(expressions, null);
+		final var evaluator = new JsonLogicEvaluator(expressions, number, null);
 		return    evaluator.evaluate(parseCache.get(json), "$");
 	}
 }

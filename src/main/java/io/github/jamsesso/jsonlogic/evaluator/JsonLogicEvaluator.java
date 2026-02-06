@@ -8,14 +8,15 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import io.github.jamsesso.jsonlogic.INumeric;
 import io.github.jamsesso.jsonlogic.ast.Deferred;
 import io.github.jamsesso.jsonlogic.ast.JSON;
 import io.github.jamsesso.jsonlogic.ast.JsonLogicOperation;
 import io.github.jamsesso.jsonlogic.ast.JsonLogicVariable;
 
-public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions, Object data) {
+public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions, INumeric number, Object data) {
 	public JsonLogicEvaluator { expressions = Collections.unmodifiableMap(expressions); }
-	public JsonLogicEvaluator scoped(final Object scopeData) { return new JsonLogicEvaluator(expressions, scopeData); }
+	public JsonLogicEvaluator scoped(final Object scopeData) { return new JsonLogicEvaluator(expressions, number, scopeData); }
 
 	record Value  (Object[] val                 , Deferred d) { void run() { d.accept(val[0]); } }
 	record Varable(Object[] key, Object fallback, Deferred d) { }
@@ -97,6 +98,14 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 		return (List<Object>)evaluate((Object)t, jsonPath);
 	}
 
+
+	public Number asNumber(final Object p0, final String jsonPath) throws JsonLogicEvaluationException {
+		final var value = evaluate(p0, jsonPath);
+		if (value instanceof final String t) try { return Double.parseDouble(t); } catch (final NumberFormatException e) { return null; }
+		if (value instanceof final Number t) return t;
+		if (JSON.isList(value) && JSON.asList(value) instanceof final List<?> l && !l.isEmpty()) return asNumber(l.get(0), jsonPath);
+		return null;
+	}
 
 	public Double asDouble(final Object p0, final String jsonPath) throws JsonLogicEvaluationException {
 		final var value = evaluate(p0, jsonPath);
