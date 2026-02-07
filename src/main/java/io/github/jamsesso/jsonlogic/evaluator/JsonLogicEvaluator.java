@@ -1,14 +1,16 @@
 package io.github.jamsesso.jsonlogic.evaluator;
 
 import java.lang.reflect.Array;
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedList;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 
 import io.github.jamsesso.jsonlogic.INumeric;
+import io.github.jamsesso.jsonlogic.NullableDeque;
 import io.github.jamsesso.jsonlogic.ast.Deferred;
 import io.github.jamsesso.jsonlogic.ast.JSON;
 import io.github.jamsesso.jsonlogic.ast.JsonLogicOperation;
@@ -29,68 +31,73 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 		}
 	}
 
-	// JsonLogicVariable
+
 	public Object evaluate(final Object logic, final String jsonPath_) throws JsonLogicEvaluationException {
-		final var todo   = new LinkedList<>();
-		final var result = new Object[1];
-		todo.addFirst(new Deferred(logic, jsonPath_, result, 0));
-		do {
-			final var next      = todo.remove();
-			if(next instanceof final Handler   h) { h.run(this); continue; }
-			if(next instanceof final Value     h) { h.run(); continue; }
-			if(next instanceof final Varable  o) {
-				final var key = o.key[0];
-				final var res = JsonPath.evaluate(key, o.d.jsonPath(), data);
-				if (res != JsonPath.MISSING) { o.d.accept(res); continue; }
-				final var ret = new Object[1];
-				todo.addFirst(new Value(ret, o.d));
-				todo.addFirst(new Deferred(o.fallback, o.d.jsonPath() + "[1]", ret, 0));
-				continue;
+		// Kapazität initialisieren, um Resizing zu vermeiden
+		final var todo   = new ArrayDeque<>(128);
+		final var values = new NullableDeque<>(128);
+
+		todo.push(new EvalTask(logic, jsonPath_));
+		while (!todo.isEmpty()) {
+			final var next = todo.pop();
+			switch (next) {
+			case final Reducer r -> r.reduce(this, values);
+			case final EvalTask task -> {
+				final var p0   = task.raw();
+				final var path = task.path();
+				switch (p0) {
+				case null             -> { values.push(null); continue; }
+				case final Number   _ -> { values.push(p0); continue; }
+				case final String   _ -> { values.push(p0); continue; }
+				case final Boolean  _ -> { values.push(p0); continue; }
+				case final Map<?,?> _ -> { values.push(p0); continue; }
+				case final List<?> args -> {
+					final var size = args.size();
+					todo.push(new ListReducer(size));
+					for (var i = size - 1; i >= 0; i--) todo.push(new EvalTask(args.get(i), path + "[" + i + "]"));
+				}
+				case final JsonLogicOperation op -> {
+					final var handler = expressions.get(op.operator());
+					if (handler == null) throw new JsonLogicEvaluationException("Undefined: " + op.operator(), path);
+					final var args = op.arguments();
+					values.push(handler.evaluate(this, args == null ? Collections.EMPTY_LIST : args, path+"."+op.operator()));
+				}
+				case final JsonLogicVariable v -> {
+					todo.push(new VariableReducer(           path));
+					todo.push(new EvalTask(v.key         (), path + ".key"));
+					todo.push(new EvalTask(v.defaultValue(), path + ".key"));
+				}
+				default -> throw new IllegalStateException("Unexpected type: " + p0.getClass());
+				}
 			}
-			if(next instanceof final Deferred cur) {
-				final var p0       = cur.raw();
-				final var jsonPath = cur.jsonPath();
-				if(p0 == null                   ) { cur.accept(null); continue; }
-				if(p0 instanceof final Number  t) { cur.accept( t ); continue; }
-				if(p0 instanceof final String  t) { cur.accept( t ); continue; }
-				if(p0 instanceof final Boolean t) { cur.accept( t ); continue; }
-				if(p0.getClass().isPrimitive()  ) { cur.accept( p0); continue; }
-				if(p0 instanceof final List<?> t) {
-					var index = 0;
-					final var ret = new Object[t.size()];
-					for(final var element : t) { todo.addFirst(new Deferred(element, jsonPath + "[" + index+ "]", ret, index)); index++; }
-					cur.accept(Arrays.asList(ret));
-					continue;
-				}
-				if(p0 instanceof final JsonLogicOperation operation) {
-					final var handler = expressions.get(operation.operator());
-					if (handler == null) throw new JsonLogicEvaluationException("Undefined operation '" + operation.operator() + "'", jsonPath);
-					final var args = operation.arguments();
-					if(args != null && args.size() == 1 && args.get(0) instanceof final JsonLogicOperation op) {
-						final var ret = new Object[1];
-						todo.addFirst(new Handler(handler, ret, cur, jsonPath+"."+operation.operator()));
-						todo.addFirst(new Deferred(op , jsonPath+" '"+op.operator()+"'", ret, 0));
-						continue;
-					}
-					cur.accept(handler.evaluate(this, args, jsonPath+"."+operation.operator()));
-					continue;
-				}
-				if(p0 instanceof final JsonLogicVariable v) {
-					final var res = new Object[1];
-					if (null != data) {
-						todo.addFirst(new Varable(res, v.defaultValue(), cur));
-						todo.addFirst(new Deferred(v.key(), jsonPath, res, 0));
-					} else {
-						todo.addFirst(new Value(res, cur));
-						todo.addFirst(new Deferred(v.defaultValue(), jsonPath + "[1]", res, 0));
-					}
-					continue;
-				}
-				throw new IllegalStateException("evaluate({"+p0.getClass().getCanonicalName()+"}"+p0);
+			default -> throw new IllegalStateException("Unexpected stack element: " + next);
 			}
-			throw new IllegalStateException("evaluate({"+next.getClass().getCanonicalName()+"}"+next);
-		} while(!todo.isEmpty());
-		return result[0];
+		}
+		final var ret = values.pop();
+		return (JsonPath.MISSING==ret ? null : ret);
+	}
+
+	record EvalTask(Object raw, String path) {}
+	sealed interface Reducer permits ListReducer, VariableReducer {
+		void reduce(JsonLogicEvaluator ev, Deque<Object> values) throws JsonLogicEvaluationException;
+	}
+
+	record ListReducer(int size) implements Reducer {
+		@Override public void reduce(final JsonLogicEvaluator ev, final Deque<Object> values) {
+			final var results = new Object[size];
+			for (var i = size - 1; i >= 0; i--) results[i] = values.pop();
+			values.push(Arrays.asList(results));
+		}
+	}
+
+	record VariableReducer(String path) implements Reducer {
+		@Override public void reduce(final JsonLogicEvaluator ev, final Deque<Object> values) throws JsonLogicEvaluationException {
+			final var key          = values.pop();
+			final var defaultValue = values.pop();
+			final var res          = JsonPath.evaluate(key, path, ev.data);
+			if(res == JsonPath.MISSING) values.push(defaultValue);
+			else                        values.push(res);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
