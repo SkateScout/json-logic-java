@@ -3,6 +3,7 @@ package io.github.jamsesso.jsonlogic.evaluator.expressions;
 import java.util.List;
 
 import io.github.jamsesso.jsonlogic.NumericDouble;
+import io.github.jamsesso.jsonlogic.PathSegment;
 import io.github.jamsesso.jsonlogic.ast.JSON;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluationException;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluator;
@@ -33,7 +34,7 @@ public class EqualityExpression {
 		return !JsonLogicEvaluator.asBoolean(left) && !JsonLogicEvaluator.asBoolean(right);
 	}
 
-	public static boolean equality(final JsonLogicEvaluator evaluator, final List<?> arguments, final String jsonPath) throws JsonLogicEvaluationException {
+	public static boolean equality(final JsonLogicEvaluator evaluator, final List<?> arguments, final PathSegment jsonPath) throws JsonLogicEvaluationException {
 		if (arguments.size() != 2) throw new JsonLogicEvaluationException("equality expressions expect exactly 2 arguments", jsonPath);
 		final var left  = evaluator.evaluate(arguments.get(0), jsonPath);
 		final var right = evaluator.evaluate(arguments.get(1), jsonPath);

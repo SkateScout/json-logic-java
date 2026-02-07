@@ -5,15 +5,17 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import io.github.jamsesso.jsonlogic.PathSegment;
+
 public final class JsonLogicParser {
 	// Utility class has no public constructor.
 	private JsonLogicParser() { }
 
 	public static Object parse(final String jsonText) throws JsonLogicParseException {
-		try { return parse(JSON.parse(jsonText), "$"); } catch (final Exception e) { throw new JsonLogicParseException(e, "$"); }
+		try { return parse(JSON.parse(jsonText), PathSegment.ROOT); } catch (final Exception e) { throw new JsonLogicParseException(e, PathSegment.ROOT); }
 	}
 
-	public static Object parse(final Object raw, final String jsonPath_) throws JsonLogicParseException {
+	public static Object parse(final Object raw, final PathSegment jsonPath_) throws JsonLogicParseException {
 		final var result = new Object[1];
 		final var todo   = new LinkedList<>(List.of(new Deferred(raw, jsonPath_, result, 0)));
 		do {
@@ -36,8 +38,8 @@ public final class JsonLogicParser {
 				final var argRet  = new Object[argsUse];
 				if(args instanceof final List<?> l) {	// Always coerce single-argument operations into a List with a single element.
 					var idx=0;
-					for (final var element : l) { todo.add(new Deferred(element, jsonPath+" ["+idx+"]", argRet, idx)); idx++;  }
-				} else                            todo.add(new Deferred(args   , jsonPath+" [0]"      , argRet, 0  ));
+					for (final var element : l) { todo.add(new Deferred(element, jsonPath.sub(idx), argRet, idx)); idx++;  }
+				} else                            todo.add(new Deferred(args   , jsonPath.sub(0)  , argRet, 0  ));
 
 				if ("var".equals(key)) cur.accept(new JsonLogicVariable(argRet));					    // Special case for variable handling
 				else                   cur.accept(new JsonLogicOperation(key, Arrays.asList(argRet)));  // Handle regular operations

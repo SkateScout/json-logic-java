@@ -10,11 +10,9 @@ import io.github.jamsesso.jsonlogic.evaluator.JsonLogicExpressionFI;
 
 public record Reduce(BiFunction<Number, Number, Number> reducer, int maxArguments, int minArguments, boolean isMinus) implements JsonLogicExpressionFI {
 	public Reduce { if(maxArguments < 1) maxArguments = Integer.MAX_VALUE; }
-	@Override public Number evaluate(final JsonLogicEvaluator evaluator, final List<?> args, final String jsonPath) throws JsonLogicEvaluationException {
+	@Override public Number evaluate(final JsonLogicEvaluator evaluator, final List<?> args, final PathSegment jsonPath) throws JsonLogicEvaluationException {
 		if (args.isEmpty()) return null;
 
-		// if(maxArguments > 0) size = Math.min(size, maxArguments);
-		// if(size < minArguments) return null;
 		Number accumulator = null;
 		final var todo = new NullableDeque<>(3 * args.size());
 		for(var i=args.size()-1;i>=0;i--) todo.push(args.get(i));
@@ -32,7 +30,7 @@ public record Reduce(BiFunction<Number, Number, Number> reducer, int maxArgument
 			}
 			if(v instanceof JsonLogicNode) { todo.push(evaluator.evaluate(v, jsonPath)); continue; }
 			if(argIdx == 0 && v instanceof List) { todo.push(args); continue; }
-			if(!(evaluator.asNumber(v, jsonPath+"["+argIdx+"]") instanceof final Number cur)) return null;
+			if(!(evaluator.asNumber(v, jsonPath.sub(argIdx)) instanceof final Number cur)) return null;
 			accumulator = 0 == argIdx ? cur : reducer.apply(accumulator, cur);
 			argIdx++;
 			if(argIdx == maxArguments) return accumulator;

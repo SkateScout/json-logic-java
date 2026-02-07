@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import io.github.jamsesso.jsonlogic.PathSegment;
 import io.github.jamsesso.jsonlogic.ast.JSON;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluationException;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluator;
@@ -14,7 +15,7 @@ import io.github.jamsesso.jsonlogic.evaluator.JsonLogicExpressionFI;
 
 public record MissingExpression(boolean isSome) implements JsonLogicExpressionFI {
 	@Override
-	public Object evaluate(final JsonLogicEvaluator evaluator, final List<?> args, final String jsonPath) throws JsonLogicEvaluationException {
+	public Object evaluate(final JsonLogicEvaluator evaluator, final List<?> args, final PathSegment jsonPath) throws JsonLogicEvaluationException {
 		if (isSome && (args.size() < 2)) throw new JsonLogicEvaluationException("missing_some expects first argument to be an integer and the second argument to be an array", jsonPath);
 		var values = evaluator.evaluate(args, jsonPath);
 		if (values.size() == 1 && JSON.isList(values.get(0))) values = JSON.asList(values.get(0));

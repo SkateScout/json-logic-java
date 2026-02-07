@@ -3,6 +3,7 @@ package io.github.jamsesso.jsonlogic.evaluator;
 import java.util.List;
 import java.util.Map;
 
+import io.github.jamsesso.jsonlogic.PathSegment;
 import io.github.jamsesso.jsonlogic.ast.JSON;
 
 public class JsonPath {
@@ -10,8 +11,8 @@ public class JsonPath {
 	/** Sentinel object to represent a missing value (for internal use only). */
 	public static final Object MISSING = new Object();
 
-	public static Object evaluate(final Object keyParam, String jsonPath, final Object data) throws JsonLogicEvaluationException {
-		jsonPath = jsonPath + ".var";
+	public static Object evaluate(final Object keyParam, PathSegment jsonPath, final Object data) throws JsonLogicEvaluationException {
+		jsonPath = jsonPath.sub("var");
 		if (keyParam  == null) return data;
 		if (data == null) return MISSING;
 		if (keyParam instanceof final Number idx) {
@@ -24,7 +25,7 @@ public class JsonPath {
 			if (name.isEmpty()) return data;
 			final var keys = name.split("\\.");
 			var result = data;
-			jsonPath = jsonPath + "[0]";
+			jsonPath = jsonPath.sub(0);
 			for (final var key : keys) {
 				if(result == null || result == MISSING) return result;
 				result = JSON.plain(result);
@@ -41,6 +42,6 @@ public class JsonPath {
 			}
 			return result;
 		}
-		throw new JsonLogicEvaluationException("var first argument must be null, number, or string", jsonPath + "[0]");
+		throw new JsonLogicEvaluationException("var first argument must be null, number, or string", jsonPath.sub(0));
 	}
 }
