@@ -19,17 +19,6 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 	public JsonLogicEvaluator { expressions = Collections.unmodifiableMap(expressions); }
 	public JsonLogicEvaluator scoped(final Object scopeData) { return new JsonLogicEvaluator(expressions, number, scopeData); }
 
-	// sealed interface Todo permits Value, Varable, Handler { }
-	// record Value  (Object[] val                 , Deferred d) implements Todo { void run() { d.accept(val[0]); } }
-	// record Varable(Object[] key, Object fallback, Deferred d) implements Todo { }
-	// record Handler(JsonLogicExpressionFI h, Object[] result, Deferred d, PathSegment jsonPath) implements Todo {
-	// 	void run(final JsonLogicEvaluator e) throws JsonLogicEvaluationException {
-	// 		final var r = result[0];
-	// 		final var args = (JSON.isList(r) ? JSON.asList(r) : Collections.singletonList(r));
-	// 		d.accept(h.evaluate(e, args, jsonPath));
-	// 	}
-	// }
-
 	static enum TASK { LIST, VAR, TASK }
 	public Object evaluate(final Object logic, final PathSegment jsonPath_) throws JsonLogicEvaluationException {
 		final var todo   = new NullableDeque<>(128);
@@ -86,9 +75,7 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 						final var handler = expressions.get(op.operator());
 						if (handler == null) throw new JsonLogicEvaluationException("Undefined: " + op.operator(), path);
 						final var args = op.arguments();
-						final var result = handler.evaluate(this, args == null ? Collections.EMPTY_LIST : args, path.sub(op.operator()));
-						// System.out.println("OP["+op.operator()+"]("+args+")="+result);
-						values.push(result);
+						values.push(handler.evaluate(this, args == null ? Collections.EMPTY_LIST : args, path.sub(op.operator())));
 					}
 					case final JsonLogicVariable v -> {
 						todo.push(TASK.VAR);
@@ -102,7 +89,6 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 					}
 					default -> throw new IllegalStateException("Unexpected type: " + p0.getClass());
 					}
-
 				}
 				}
 			}
@@ -118,19 +104,47 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 		return (List<Object>)evaluate((Object)t, jsonPath);
 	}
 
+	public static boolean evalNeeded(final Object v) {
+		return switch(v) {
+		case null           -> false;
+		case final String  _-> false;
+		case final Number  _-> false;
+		case final Boolean _-> false;
+		default             -> true;
+		};
+	}
+
 	public Number asNumber(final Object p0, final PathSegment jsonPath) throws JsonLogicEvaluationException {
-		final var value = evaluate(p0, jsonPath);
-		if (value instanceof final String t) try { return Double.parseDouble(t); } catch (final NumberFormatException e) { return null; }
+		final var value = evalNeeded(p0) ? evaluate(p0, jsonPath) : p0;
 		if (value instanceof final Number t) return t;
+		if (value instanceof final String t) try { return Double.parseDouble(t); } catch (final NumberFormatException e) { return null; }
 		if (JSON.isList(value) && JSON.asList(value) instanceof final List<?> l && !l.isEmpty()) return asNumber(l.get(0), jsonPath);
 		return null;
 	}
 
-	public Double asDouble(final Object p0, final PathSegment jsonPath) throws JsonLogicEvaluationException {
-		final var value = evaluate(p0, jsonPath);
+	public Number asNumber(final List<?> p, final int idx, final PathSegment jsonPath) throws JsonLogicEvaluationException {
+		var value = p.get(idx);
+		value = evalNeeded(value) ? evaluate(value, jsonPath.sub(idx)) : value;
+		if (value instanceof final Number t) return t;
 		if (value instanceof final String t) try { return Double.parseDouble(t); } catch (final NumberFormatException e) { return null; }
+		if (JSON.isList(value) && JSON.asList(value) instanceof final List<?> l && !l.isEmpty()) return asNumber(l.get(0), jsonPath.sub(idx));
+		return null;
+	}
+
+	public Double asDouble(final Object p0, final PathSegment jsonPath) throws JsonLogicEvaluationException {
+		final var value = evalNeeded(p0) ? evaluate(p0, jsonPath) : p0;
 		if (value instanceof final Number t) return t.doubleValue();
+		if (value instanceof final String t) try { return Double.parseDouble(t); } catch (final NumberFormatException e) { return null; }
 		if (JSON.isList(value) && JSON.asList(value) instanceof final List<?> l && !l.isEmpty()) return asDouble(l.get(0), jsonPath);
+		return null;
+	}
+
+	public Double asDouble(final List<?> p, final int idx, final PathSegment jsonPath) throws JsonLogicEvaluationException {
+		var value = p.get(idx);
+		value = evalNeeded(value) ? evaluate(value, jsonPath.sub(idx)) : value;
+		if (value instanceof final Number t) return t.doubleValue();
+		if (value instanceof final String t) try { return Double.parseDouble(t); } catch (final NumberFormatException e) { return null; }
+		if (JSON.isList(value) && JSON.asList(value) instanceof final List<?> l && !l.isEmpty()) return asDouble(l.get(0), jsonPath.sub(idx));
 		return null;
 	}
 
@@ -147,5 +161,8 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 		return(!value.getClass().isArray() || Array.getLength(value) > 0);
 	}
 
-	public boolean asBoolean(final Object p0, final PathSegment jsonPath) throws JsonLogicEvaluationException { return asBoolean(evaluate(p0, jsonPath)); }
+	public boolean asBoolean(final Object p0, final PathSegment jsonPath) throws JsonLogicEvaluationException {
+		final var value = evalNeeded(p0) ? evaluate(p0, jsonPath) : p0;
+		return asBoolean(value);
+	}
 }

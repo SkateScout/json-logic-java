@@ -83,10 +83,10 @@ public final class JsonLogic {
 		if (size > 3) throw new JsonLogicEvaluationException("'"+name + "' requires at most 3 arguments", jsonPath);
 		// Convert the arguments to doubles
 		// If regular comparisons fail also between fails
-		if(!(evaluator.asDouble(arguments.get(0), jsonPath.sub(0)) instanceof final Double a)
-				|| !(evaluator.asDouble(arguments.get(1), jsonPath.sub(1)) instanceof final Double b) || !compare.test(a, b)) return false;
+		if(!(evaluator.asDouble(arguments, 0, jsonPath) instanceof final Double a)
+				|| !(evaluator.asDouble(arguments, 1, jsonPath) instanceof final Double b) || !compare.test(a, b)) return false;
 		if (size == 2) return true; // Handle between comparisons is size = 3
-		if(!(evaluator.asDouble(arguments.get(2), jsonPath.sub(2)) instanceof final Double c)) return false;
+		if(!(evaluator.asDouble(arguments, 2, jsonPath) instanceof final Double c)) return false;
 		return compare.test(b, c);
 	}
 
@@ -131,7 +131,7 @@ public final class JsonLogic {
 
 	private static String  substr         (final JsonLogicEvaluator evaluator, final List<?> arguments, final PathSegment jsonPath) throws JsonLogicEvaluationException {
 		if (arguments.size() < 2 || arguments.size() > 3) throw new JsonLogicEvaluationException("substr expects 2 or 3 arguments", jsonPath);
-		if (!(evaluator.asNumber(arguments.get(1), jsonPath) instanceof final Number arg1)) throw new JsonLogicEvaluationException("second argument to substr must be a number", jsonPath.sub(1));
+		if (!(evaluator.asNumber(arguments, 1, jsonPath) instanceof final Number arg1)) throw new JsonLogicEvaluationException("second argument to substr must be a number", jsonPath.sub(1));
 		final var value = evaluator.evaluate(arguments.get(0), jsonPath).toString();
 		final var len = value.length();
 		if (arguments.size() == 2) {
@@ -141,7 +141,7 @@ public final class JsonLogic {
 			if (startIndex < 0) return "";
 			return value.substring(startIndex, endIndex);
 		}
-		if (!(evaluator.asNumber(arguments.get(2), jsonPath) instanceof final Number arg2)) throw new JsonLogicEvaluationException("third argument to substr must be an integer", jsonPath.sub(2));
+		if (!(evaluator.asNumber(arguments, 2, jsonPath) instanceof final Number arg2)) throw new JsonLogicEvaluationException("third argument to substr must be an integer", jsonPath.sub(2));
 		var startIndex = arg1.intValue();
 		if (startIndex < 0) startIndex = value.length() + startIndex;
 		var endIndex = arg2.intValue();
@@ -183,11 +183,11 @@ public final class JsonLogic {
 		return true;
 	}
 
-	private static boolean in             (final JsonLogicEvaluator ev, final List<?> arguments, final PathSegment jsonPath) throws JsonLogicEvaluationException {
+	private static boolean in             (final JsonLogicEvaluator evaluator, final List<?> arguments, final PathSegment jsonPath) throws JsonLogicEvaluationException {
 		if (arguments.size() < 2) return false;
 		// Handle string in (substring)
-		final var needle   = ev.evaluate(arguments.get(0), jsonPath.sub(0));
-		final var haystack = ev.evaluate(arguments.get(1), jsonPath.sub(1));
+		final var needle   = evaluator.evaluate(arguments.get(0), jsonPath.sub(0));
+		final var haystack = evaluator.evaluate(arguments.get(1), jsonPath.sub(1));
 		if (arguments.get(1) instanceof final String t) return (needle == null ? false : t.contains(needle.toString()));
 		return (JSON.isList(haystack) ? JSON.asList(haystack).contains(needle) : false);
 	}
@@ -204,6 +204,7 @@ public final class JsonLogic {
 		final var size = args.size();
 		// If there is only a single argument, simply evaluate & return that argument.
 		if (size == 1) return evaluator.evaluate(args.get(0), jsonPath.sub(0));
+
 		for (var i = 0; i < size - 1; i += 2) {
 			final var condition    = evaluator.evaluate(args.get(i    ), jsonPath.sub(i));
 			if (evaluator.asBoolean(condition, jsonPath.sub(i)))
