@@ -1,11 +1,9 @@
 package io.github.jamsesso.jsonlogic.evaluator;
 
 import java.lang.reflect.Array;
-import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 
@@ -13,6 +11,7 @@ import io.github.jamsesso.jsonlogic.INumeric;
 import io.github.jamsesso.jsonlogic.NullableDeque;
 import io.github.jamsesso.jsonlogic.ast.Deferred;
 import io.github.jamsesso.jsonlogic.ast.JSON;
+import io.github.jamsesso.jsonlogic.ast.JsonLogicNode;
 import io.github.jamsesso.jsonlogic.ast.JsonLogicOperation;
 import io.github.jamsesso.jsonlogic.ast.JsonLogicVariable;
 
@@ -31,43 +30,84 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 		}
 	}
 
+	static enum TASK { LIST, VAR, TASK }
 
 	public Object evaluate(final Object logic, final String jsonPath_) throws JsonLogicEvaluationException {
-		// Kapazität initialisieren, um Resizing zu vermeiden
-		final var todo   = new ArrayDeque<>(128);
+		final var todo   = new NullableDeque<>(128);
 		final var values = new NullableDeque<>(128);
 
-		todo.push(new EvalTask(logic, jsonPath_));
+		todo.push(TASK.TASK);
+		todo.push(jsonPath_);
+		todo.push(logic);
+
+
 		while (!todo.isEmpty()) {
 			final var next = todo.pop();
 			switch (next) {
-			case final Reducer r -> r.reduce(this, values);
-			case final EvalTask task -> {
-				final var p0   = task.raw();
-				final var path = task.path();
-				switch (p0) {
-				case null             -> { values.push(null); continue; }
-				case final Number   _ -> { values.push(p0); continue; }
-				case final String   _ -> { values.push(p0); continue; }
-				case final Boolean  _ -> { values.push(p0); continue; }
-				case final Map<?,?> _ -> { values.push(p0); continue; }
-				case final List<?> args -> {
-					final var size = args.size();
-					todo.push(new ListReducer(size));
-					for (var i = size - 1; i >= 0; i--) todo.push(new EvalTask(args.get(i), path + "[" + i + "]"));
+			case null                  -> values.push(null);
+			case final Boolean       t -> values.push(t);
+			case final String        t -> values.push(t);
+			case final Number        t -> values.push(t);
+			case final List<?>       t -> values.push(t);
+			case final JsonLogicNode t -> values.push(t);
+			case final TASK   t -> {
+				switch(t) {
+				case LIST -> {
+					final var path         = (String )values.pop();
+					final var size         = (Integer)values.pop();
+					final var results = new Object[size];
+					for (var i = size - 1; i >= 0; i--) results[i] = values.pop();
+					values.push(Arrays.asList(results));
+
 				}
-				case final JsonLogicOperation op -> {
-					final var handler = expressions.get(op.operator());
-					if (handler == null) throw new JsonLogicEvaluationException("Undefined: " + op.operator(), path);
-					final var args = op.arguments();
-					values.push(handler.evaluate(this, args == null ? Collections.EMPTY_LIST : args, path+"."+op.operator()));
+				case VAR -> {
+					final var path         = (String)values.pop();
+					final var key          = values.pop();
+					final var defaultValue = values.pop();
+					final var res          = JsonPath.evaluate(key, path, data);
+					if(res == JsonPath.MISSING) values.push(defaultValue);
+					else                        values.push(res);
 				}
-				case final JsonLogicVariable v -> {
-					todo.push(new VariableReducer(           path));
-					todo.push(new EvalTask(v.key         (), path + ".key"));
-					todo.push(new EvalTask(v.defaultValue(), path + ".key"));
+				case TASK -> {
+					final var path = (String)values.pop();
+					final var p0   = values.pop();
+					switch (p0) {
+					case null             -> { values.push(null); continue; }
+					case final Number   _ -> { values.push(p0); continue; }
+					case final String   _ -> { values.push(p0); continue; }
+					case final Boolean  _ -> { values.push(p0); continue; }
+					case final Map<?,?> _ -> { values.push(p0); continue; }
+					case final List<?> args -> {
+						final var size = args.size();
+						todo.push(TASK.LIST);
+						todo.push(path);
+						todo.push(size);
+						for (var i = size - 1; i >= 0; i--) {
+							todo.push(TASK.TASK);
+							todo.push(path + "[" + i + "]");
+							todo.push(args.get(i));
+						}
+					}
+					case final JsonLogicOperation op -> {
+						final var handler = expressions.get(op.operator());
+						if (handler == null) throw new JsonLogicEvaluationException("Undefined: " + op.operator(), path);
+						final var args = op.arguments();
+						values.push(handler.evaluate(this, args == null ? Collections.EMPTY_LIST : args, path+"."+op.operator()));
+					}
+					case final JsonLogicVariable v -> {
+						todo.push(TASK.VAR);
+						todo.push(path);
+						todo.push(TASK.TASK);
+						todo.push(path + ".key");
+						todo.push(v.key         ());
+						todo.push(TASK.TASK);
+						todo.push(path + ".def");
+						todo.push(v.defaultValue());
+					}
+					default -> throw new IllegalStateException("Unexpected type: " + p0.getClass());
+					}
+
 				}
-				default -> throw new IllegalStateException("Unexpected type: " + p0.getClass());
 				}
 			}
 			default -> throw new IllegalStateException("Unexpected stack element: " + next);
@@ -75,29 +115,6 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 		}
 		final var ret = values.pop();
 		return (JsonPath.MISSING==ret ? null : ret);
-	}
-
-	record EvalTask(Object raw, String path) {}
-	sealed interface Reducer permits ListReducer, VariableReducer {
-		void reduce(JsonLogicEvaluator ev, Deque<Object> values) throws JsonLogicEvaluationException;
-	}
-
-	record ListReducer(int size) implements Reducer {
-		@Override public void reduce(final JsonLogicEvaluator ev, final Deque<Object> values) {
-			final var results = new Object[size];
-			for (var i = size - 1; i >= 0; i--) results[i] = values.pop();
-			values.push(Arrays.asList(results));
-		}
-	}
-
-	record VariableReducer(String path) implements Reducer {
-		@Override public void reduce(final JsonLogicEvaluator ev, final Deque<Object> values) throws JsonLogicEvaluationException {
-			final var key          = values.pop();
-			final var defaultValue = values.pop();
-			final var res          = JsonPath.evaluate(key, path, ev.data);
-			if(res == JsonPath.MISSING) values.push(defaultValue);
-			else                        values.push(res);
-		}
 	}
 
 	@SuppressWarnings("unchecked")
