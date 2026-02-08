@@ -56,8 +56,15 @@ public class FixtureTests {
 		}
 
 		for (final TestResult testResult : failures) {
-			final var actual = testResult.getResult();
+			final var actual  = testResult.getResult();
 			final var fixture = testResult.getFixture();
+			final var expectedValue = fixture.getExpectedValue();
+
+
+			System.out.println("actual       : {"+actual.getClass().getCanonicalName()+"}"+actual);
+			System.out.println("json         : "+fixture.getJson());
+			System.out.println("data         : "+fixture.getData());
+			System.out.println("expectedValue: {"+(null==expectedValue?null:expectedValue.getClass().getCanonicalName())+"}"+expectedValue);
 
 			System.out.println(String.format("FAIL: %s\n\t%s\n\tExpected: %s Got: %s\n", fixture.getJson(), fixture.getData(),
 					fixture.getExpectedValue(), actual instanceof final Exception e ? e.getMessage() : actual));

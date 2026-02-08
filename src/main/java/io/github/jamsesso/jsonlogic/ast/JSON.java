@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.json.JSONObject;
+
 import com.google.gson.JsonElement;
 
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluationException;
@@ -25,6 +27,7 @@ public class JSON {
 		case final Boolean             t -> t;
 		case final List<?>             t -> t;
 		case final Map<?,?>            t -> t;
+		case final int[]               t -> t;
 		case final JsonElement         t -> {
 			if (t.isJsonObject()) {
 				final Map<String, Object> map = new HashMap<>();
@@ -59,10 +62,20 @@ public class JSON {
 	}
 
 	public static Object parse(final String json) throws JsonLogicParseException {
+		final var j =json.strip();
+		if(j.length() > 0) {
+			switch(j.charAt(0)) {
+			case 't' -> { if("true" .equals(j)) return true ; }
+			case 'f' -> { if("false".equals(j)) return false; }
+			case '"' -> { if(j.charAt(j.length()-1)=='"') return j.substring(1,j.length()-1); }
+			case '0','1','2','3','4','5','6','7','8','9','-' -> {
+				try { return Double .parseDouble(j); } catch(final Throwable _)  {}
+			}
+			}
+		}
 		try { return new org.json.JSONObject(json).toMap (); } catch (final Exception e) {  }
 		try { return new org.json.JSONArray (json).toList(); } catch (final Exception e) {  }
-		new IllegalStateException(json);
-		return json;
+		return JSONObject.wrap(json);
 	}
 
 	public static Map<?,?> asMap(final Object data) {
@@ -105,5 +118,4 @@ public class JSON {
 	}
 
 	public static boolean isList(final Object data) { return data != null && (data instanceof Iterable || data.getClass().isArray()); }
-
 }

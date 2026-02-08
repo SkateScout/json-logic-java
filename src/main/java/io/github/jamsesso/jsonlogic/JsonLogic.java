@@ -286,7 +286,7 @@ public final class JsonLogic {
 	}
 
 	public Object apply(Object expr, Object rawData) throws JsonLogicException {
-		if(expr instanceof final String t) expr = JSON.parse(t);
+		if(expr    instanceof final String t) expr    = JSON.parse(t);
 		if(rawData instanceof final String t) rawData = JSON.parse(t);
 		final var evaluator = new JsonLogicEvaluator(expressions, number, JSON.plain(rawData));
 		final var expression = JsonLogicParser.parse(expr, PathSegment.ROOT);
