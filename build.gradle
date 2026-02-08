@@ -1,110 +1,32 @@
 plugins {
-  id "java"
-  id "maven"
-  id "signing"
+    id 'java'
 }
 
-group "io.github.jamsesso"
-version "1.1.1-SNAPSHOT"
+group = 'io.github.skatescout'
+version = '1.0.0'
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
 
 repositories {
-  mavenCentral()
+    mavenCentral() // Hier lädt Gradle org.json herunter
 }
 
 dependencies {
-  compile "com.google.code.gson:gson:2.8.5"
-  testCompile "junit:junit:4.12"
+    implementation 'org.json:json:20231013'
+    
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
 }
 
-task javadocJar(type: Jar, dependsOn: javadoc) {
-  classifier = "javadoc"
-  from javadoc.destinationDir
-}
-
-task sourcesJar(type: Jar) {
-  classifier = "sources"
-  from sourceSets.main.allSource
+tasks.withType(JavaCompile) {
+    options.debug = true
+    options.compilerArgs << "-g:lines,vars,source"
+    options.encoding = 'UTF-8'
 }
 
 test {
-  testLogging {
-    events "passed", "skipped", "failed"
-    exceptionFormat "full"
-    showStandardStreams = true
-  }
-}
-
-artifacts {
-  archives jar, javadocJar, sourcesJar
-}
-
-def getSonatypeUsername() {
-    return System.getenv('SONATYPE_USERNAME')
-}
-
-def getSonatypePassword() {
-    return System.getenv('SONATYPE_PASSWORD')
-}
-
-def hasCredentials() {
-  def result = getSonatypeUsername() != null && getSonatypePassword() != null
-  if (!result) {
-    println "Cannot publish package since Sonatype credentials are not set. Please set SONATYPE_USERNAME and SONATYPE_PASSWORD environment variables."
-  }
-  return result
-}
-
-signing {
-  required { gradle.taskGraph.hasTask("uploadArchives") }
-  useInMemoryPgpKeys(System.getenv('SIGNING_KEY'), System.getenv('SIGNING_PASSWORD'))
-  sign configurations.archives
-}
-
-uploadArchives {
-  repositories {
-    mavenDeployer {
-      beforeDeployment { deployment -> signing.signPom(deployment) }
-
-      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-        authentication(userName: getSonatypeUsername(), password: getSonatypePassword())
-      }
-
-      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-        authentication(userName: getSonatypeUsername(), password: getSonatypePassword())
-      }
-
-      pom.project {
-        name "json-logic-java"
-        artifactId "json-logic-java"
-        packaging "jar"
-        description "A native Java implementation of the json-logic project"
-        url "https://github.com/jamsesso/json-logic-java"
-
-        scm {
-          connection "scm:git@github.com:jamsesso/json-logic-java.git"
-          developerConnection "scm:git@github.com:jamsesso/json-logic-java.git"
-          url "https://github.com/jamsesso/json-logic-java.git"
-        }
-
-        licenses {
-          license {
-            name "MIT License"
-            url "https://github.com/jamsesso/json-logic-java/blob/master/LICENSE"
-          }
-        }
-
-        developers {
-          developer {
-            id "jamsesso"
-            name "Sam Jesso"
-            email "samuel.jesso@gmail.com"
-          }
-        }
-      }
-    }
-  }
-  onlyIf { hasCredentials() }
+    useJUnitPlatform()
 }
