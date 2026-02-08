@@ -1,10 +1,10 @@
 package io.github.jamsesso.jsonlogic.ast;
 
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import io.github.jamsesso.jsonlogic.NullableDeque;
 import io.github.jamsesso.jsonlogic.PathSegment;
 
 public final class JsonLogicParser {
@@ -16,40 +16,70 @@ public final class JsonLogicParser {
 	}
 
 	public static Object parse(final Object raw, final PathSegment jsonPath_) throws JsonLogicParseException {
-		final var result = new Object[1];
-		final var todo   = new LinkedList<>(List.of(new Deferred(raw, jsonPath_, result, 0)));
-		do {
-			final var cur      = todo.remove();
-			final var jsonPath = cur.jsonPath();
-			final var plain    = JSON.plain(cur.raw());
-			switch(plain) {
-			case null                  -> cur.accept(plain);
-			case final Number        _ -> cur.accept(plain);
-			case final String        _ -> cur.accept(plain);
-			case final Boolean       _ -> cur.accept(plain);
-			case final List<?>       _ -> cur.accept(plain);
-			case final Map<?,?>      t -> {
-				if (t.size() != 1) throw new JsonLogicParseException("objects must have exactly 1 key defined, found " + t.size(), jsonPath);
-				final var e       = t.entrySet().iterator().next();
-				final var key     = e.getKey().toString().toLowerCase();
-				final var args    = JSON.plain(e.getValue());
-				final var argsMax = "var".equals(key) ? 2 : Integer.MAX_VALUE;
-				final var argsUse = Math.min(args instanceof final List l ? l.size() : 1 , argsMax);
-				final var argRet  = new Object[argsUse];
-				if(args instanceof final List<?> l) {	// Always coerce single-argument operations into a List with a single element.
-					var idx=0;
-					for (final var element : l) { todo.add(new Deferred(element, jsonPath.sub(idx), argRet, idx)); idx++;  }
-				} else                            todo.add(new Deferred(args   , jsonPath.sub(0)  , argRet, 0  ));
-
-				if ("var".equals(key)) cur.accept(new JsonLogicVariable(argRet));					    // Special case for variable handling
-				else                   cur.accept(new JsonLogicOperation(key, Arrays.asList(argRet)));  // Handle regular operations
+		final var TASK_NODE   = 0;
+		final var TASK_REDUCE = 1;
+		final var todoRaw = new NullableDeque<>(512);
+		final var values  = new NullableDeque<>(512);
+		var todoArgCount = new int[256];
+		var todoTaskType = new int[256];
+		var intPtr  = -1;
+		var taskPtr = -1;
+		todoRaw.push(raw);
+		todoRaw.push(jsonPath_);
+		todoTaskType[++taskPtr] = TASK_NODE;
+		while (taskPtr >= 0) {
+			final var currentTask = todoTaskType[taskPtr--];
+			switch (currentTask) {
+			case TASK_REDUCE -> {
+				final var size   = todoArgCount[intPtr--];
+				final var key  = (String) todoRaw.pop();
+				final var args = new Object[size];
+				for (var i = size - 1; i >= 0; i--) args[i] = values.pop();
+				if ("var".equals(key)) values.push(new JsonLogicVariable(args));
+				else values.push(new JsonLogicOperation(key, Arrays.asList(args)));
 			}
-			default -> {
-				if(!plain.getClass().isPrimitive()) throw new IllegalStateException("parse({"+plain.getClass().getCanonicalName()+"})");
-				cur.accept(plain);
+			case TASK_NODE -> {
+				final var jsonPath = (PathSegment) todoRaw.pop();
+				final var plain    = JSON.plain(todoRaw.pop());
+				switch (plain) {
+				case null -> values.push(null);
+				case final Number    n -> values.push(n);
+				case final String    s -> values.push(s);
+				case final Boolean   b -> values.push(b);
+				case final List<?>   l -> values.push(l);
+				case final Map<?, ?> t -> {
+					if (t.size() != 1) throw new JsonLogicParseException("objects must have exactly 1 key defined, found " + t.size(), jsonPath);
+					final var entry = t.entrySet().iterator().next();
+					final var key = entry.getKey().toString().toLowerCase();
+					final var rawArgs = JSON.plain(entry.getValue());
+					final var argsMax  = "var".equals(key) ? 2 : Integer.MAX_VALUE;
+					final var argsSize = (rawArgs instanceof final List<?> l) ? l.size() : 1;
+					final var argsUse  = Math.min(argsSize, argsMax);
+					if (taskPtr + argsUse + 1 >= todoTaskType.length) {
+						final var newSize = todoTaskType.length * 2 + argsUse;
+						todoTaskType = java.util.Arrays.copyOf(todoTaskType, newSize);
+						todoArgCount = java.util.Arrays.copyOf(todoArgCount, newSize);
+					}
+					todoRaw.push(key);
+					todoArgCount[++intPtr ] = argsUse;
+					todoTaskType[++taskPtr] = TASK_REDUCE;
+					if (rawArgs instanceof final List<?> l) {
+						for (var i = argsUse - 1; i >= 0; i--) {
+							todoRaw.push(l.get(i));
+							todoRaw.push(jsonPath.sub(i));
+							todoTaskType[++taskPtr] = TASK_NODE;
+						}
+					} else {
+						todoRaw.push(rawArgs);
+						todoRaw.push(jsonPath.sub(0));
+						todoTaskType[++taskPtr] = TASK_NODE;
+					}
+				}
+				default -> { if (!plain.getClass().isPrimitive()) throw new IllegalStateException("Unexpected type: " + plain.getClass()); values.push(plain); }
+				}
 			}
 			}
-		} while(!todo.isEmpty());
-		return result[0];
+		}
+		return values.pop();
 	}
 }
