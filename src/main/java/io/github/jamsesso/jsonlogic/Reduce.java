@@ -28,7 +28,7 @@ public record Reduce(BiFunction<Number, Number, Number> reducer, int maxArgument
 				if(l.isEmpty()) return null;
 				v = l.get(0);
 			}
-			if(v instanceof JsonLogicNode) { todo.push(evaluator.evaluate(v, jsonPath)); continue; }
+			if(v instanceof JsonLogicNode) { todo.push(evaluator.evaluate(v, jsonPath.sub(argIdx))); continue; }
 			if(argIdx == 0 && v instanceof List) { todo.push(args); continue; }
 			if(!(evaluator.asNumber(v, jsonPath.sub(argIdx)) instanceof final Number cur)) return null;
 			accumulator = 0 == argIdx ? cur : reducer.apply(accumulator, cur);

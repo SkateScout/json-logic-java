@@ -1,7 +1,9 @@
 package io.github.jamsesso.jsonlogic;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -77,6 +79,19 @@ public final class JsonLogic {
 		defaultExpressions = m;
 	}
 
+	public static boolean truthy(final Object value) {
+		if (value == null) return false;
+		if (value instanceof final String     s) return !s.isEmpty();
+		if (value instanceof final Boolean    v) return v;
+		if (value instanceof final Number     n) {
+			if (n instanceof final Double     d) return(!d.isNaN() && (d.isInfinite() || d.doubleValue() != 0.0));
+			if (n instanceof final Float      f) return(!f.isNaN() && (f.isInfinite() || f.floatValue () != 0.0));
+			return n.doubleValue() != 0.0;
+		}
+		if (value instanceof final Collection c) return !c.isEmpty();
+		return(!value.getClass().isArray() || Array.getLength(value) > 0);
+	}
+
 	private static boolean evaluateBoolean(final String name, final BiPredicate<Double, Double> compare, final JsonLogicEvaluator evaluator, final List<?> arguments, final PathSegment jsonPath) throws JsonLogicEvaluationException {
 		final var size = arguments.size();
 		if (size < 2) throw new JsonLogicEvaluationException("'"+name + "' requires at least 2 arguments", jsonPath);
@@ -108,7 +123,7 @@ public final class JsonLogic {
 		Object value = isAnd;
 		for (final var element : arguments) {
 			value = ev.evaluate(element, jsonPath.sub(index++));
-			final var result =  JsonLogicEvaluator.asBoolean(value);
+			final var result =  truthy(value);
 			if( isAnd && !result) return false;
 			if(!isAnd &&  result) return value;
 		}
@@ -249,7 +264,7 @@ public final class JsonLogic {
 	public JsonLogic addOperation(final String key, final JsonLogicExpressionFI fkt) {
 		synchronized (defaultExpressions) {
 			if(expressions == defaultExpressions) expressions = new ConcurrentHashMap<>(defaultExpressions);
-			expressions.put(key, fkt);
+			expressions.put(key.toLowerCase(), fkt);
 		}
 		return this;
 	}
@@ -270,8 +285,9 @@ public final class JsonLogic {
 		});
 	}
 
-	public Object apply(final Object expr, final Object rawData) throws JsonLogicException {
-		if(expr instanceof final String t) return t;
+	public Object apply(Object expr, Object rawData) throws JsonLogicException {
+		if(expr instanceof final String t) expr = JSON.parse(t);
+		if(rawData instanceof final String t) rawData = JSON.parse(t);
 		final var evaluator = new JsonLogicEvaluator(expressions, number, JSON.plain(rawData));
 		final var expression = JsonLogicParser.parse(expr, PathSegment.ROOT);
 		return    evaluator.evaluate(expression, PathSegment.ROOT);

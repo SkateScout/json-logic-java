@@ -3,8 +3,11 @@ package io.github.jamsesso.jsonlogic.ast;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.google.gson.JsonElement;
 
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluationException;
 import io.github.jamsesso.jsonlogic.evaluator.expressions.EqualityExpression;
@@ -13,15 +16,52 @@ public class JSON {
 	private JSON() { }
 
 	public static Object plain(final Object o) {
-		if(o instanceof final org.json.JSONObject t) return t.toMap();
-		if(o instanceof final org.json.JSONArray  t) return t.toList();
-		if(o == org.json.JSONObject.NULL     ) return null; // Handle null
-		return o;
+		return switch(o) {
+		case null                       -> null;
+		case final org.json.JSONObject t -> t.toMap();
+		case final org.json.JSONArray  t -> t.toList();
+		case final String              t -> t;
+		case final Number              t -> t;
+		case final Boolean             t -> t;
+		case final List<?>             t -> t;
+		case final Map<?,?>            t -> t;
+		case final JsonElement         t -> {
+			if (t.isJsonObject()) {
+				final Map<String, Object> map = new HashMap<>();
+				final var object = t.getAsJsonObject();
+				for (final String key : object.keySet()) {
+					map.put(key, plain(object.get(key)));
+				}
+				yield map;
+			}
+			if (t.isJsonArray()) {
+				final List<Object> values = new ArrayList<>();
+				for (final JsonElement item : t.getAsJsonArray()) {
+					values.add(plain(item));
+				}
+				yield values;
+			}
+			if (t.isJsonNull()) yield null;
+			if (t.isJsonPrimitive()) {
+				final var primitive = t.getAsJsonPrimitive();
+				if (primitive.isBoolean()) yield primitive.getAsBoolean();
+				if (primitive.isNumber()) yield primitive.getAsNumber().doubleValue();
+				yield primitive.getAsString();
+			}
+			throw new IllegalStateException("T "+t.getClass().getCanonicalName());
+		}
+		default -> {
+			if(o == org.json.JSONObject.NULL     ) yield null; // Handle null
+			throw new IllegalStateException("o "+o.getClass().getCanonicalName());
+			// yield o;
+		}
+		};
 	}
 
 	public static Object parse(final String json) throws JsonLogicParseException {
 		try { return new org.json.JSONObject(json).toMap (); } catch (final Exception e) {  }
 		try { return new org.json.JSONArray (json).toList(); } catch (final Exception e) {  }
+		new IllegalStateException(json);
 		return json;
 	}
 

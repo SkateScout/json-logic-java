@@ -60,13 +60,14 @@ public final class JsonLogicParser {
 						todoTaskType = java.util.Arrays.copyOf(todoTaskType, newSize);
 						todoArgCount = java.util.Arrays.copyOf(todoArgCount, newSize);
 					}
+					final var opPath = jsonPath.sub(key);
 					todoRaw.push(key);
 					todoArgCount[++intPtr ] = argsUse;
 					todoTaskType[++taskPtr] = TASK_REDUCE;
 					if (rawArgs instanceof final List<?> l) {
 						for (var i = argsUse - 1; i >= 0; i--) {
 							todoRaw.push(l.get(i));
-							todoRaw.push(jsonPath.sub(i));
+							todoRaw.push(opPath.sub(i));
 							todoTaskType[++taskPtr] = TASK_NODE;
 						}
 					} else {

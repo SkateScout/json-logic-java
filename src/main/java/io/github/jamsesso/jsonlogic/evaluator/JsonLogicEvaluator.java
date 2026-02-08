@@ -1,13 +1,12 @@
 package io.github.jamsesso.jsonlogic.evaluator;
 
-import java.lang.reflect.Array;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import io.github.jamsesso.jsonlogic.INumeric;
+import io.github.jamsesso.jsonlogic.JsonLogic;
 import io.github.jamsesso.jsonlogic.NullableDeque;
 import io.github.jamsesso.jsonlogic.PathSegment;
 import io.github.jamsesso.jsonlogic.ast.JSON;
@@ -148,21 +147,8 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 		return null;
 	}
 
-	public static boolean asBoolean(final Object value) {
-		if (value == null) return false;
-		if (value instanceof final String     s) return !s.isEmpty();
-		if (value instanceof final Boolean    v) return v;
-		if (value instanceof final Number     n) {
-			if (n instanceof final Double     d) return(!d.isNaN() && (d.isInfinite() || d.doubleValue() != 0.0));
-			if (n instanceof final Float      f) return(!f.isNaN() && (f.isInfinite() || f.floatValue () != 0.0));
-			return n.doubleValue() != 0.0;
-		}
-		if (value instanceof final Collection c) return !c.isEmpty();
-		return(!value.getClass().isArray() || Array.getLength(value) > 0);
-	}
-
 	public boolean asBoolean(final Object p0, final PathSegment jsonPath) throws JsonLogicEvaluationException {
 		final var value = evalNeeded(p0) ? evaluate(p0, jsonPath) : p0;
-		return asBoolean(value);
+		return JsonLogic.truthy(value);
 	}
 }

@@ -2,6 +2,7 @@ package io.github.jamsesso.jsonlogic.evaluator.expressions;
 
 import java.util.List;
 
+import io.github.jamsesso.jsonlogic.JsonLogic;
 import io.github.jamsesso.jsonlogic.NumericDouble;
 import io.github.jamsesso.jsonlogic.PathSegment;
 import io.github.jamsesso.jsonlogic.ast.JSON;
@@ -31,7 +32,7 @@ public class EqualityExpression {
 		if (left instanceof final Boolean l && right instanceof final String  r) return compareStringToBoolean(r, l);
 		if (left instanceof final List<?> l && right instanceof final List<?> r) return JSON.equals(r, l);
 		// Check non-truthy values
-		return !JsonLogicEvaluator.asBoolean(left) && !JsonLogicEvaluator.asBoolean(right);
+		return !JsonLogic.truthy(left) && !JsonLogic.truthy(right);
 	}
 
 	public static boolean equality(final JsonLogicEvaluator evaluator, final List<?> arguments, final PathSegment jsonPath) throws JsonLogicEvaluationException {
@@ -47,5 +48,5 @@ public class EqualityExpression {
 	}
 
 	private static boolean compareNumberToBoolean(final Number left, final Boolean right) { return (right ? left.doubleValue() == 1.0 : left.doubleValue() == 0.0); }
-	private static boolean compareStringToBoolean(final String left, final Boolean right) { return JsonLogicEvaluator.asBoolean(left) == right; }
+	private static boolean compareStringToBoolean(final String left, final Boolean right) { return JsonLogic.truthy(left) == right; }
 }
