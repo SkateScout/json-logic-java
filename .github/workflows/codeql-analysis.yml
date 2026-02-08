@@ -1,0 +1,50 @@
+name: "CodeQL Analysis"
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  schedule:
+    - cron: '20 18 * * 1' # Läuft einmal pro Woche montags
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Schritt 1: Java Setup (Wichtig für die Analyse-Qualität)
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: 'maven'
+
+    # Schritt 2: CodeQL initialisieren
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: java
+        # "extended-queries" findet mehr Probleme, dauert aber etwas länger
+        queries: security-extended,security-and-quality
+
+    # Schritt 3: Manueller Build (Besser als Autobuild!)
+    # Dies stellt sicher, dass CodeQL alle Abhängigkeiten und Typen korrekt erfasst.
+    - name: Build with Maven
+      run: mvn clean compile -DskipTests
+
+    # Schritt 4: Analyse durchführen
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:java"
+		
