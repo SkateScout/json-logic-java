@@ -73,7 +73,7 @@ public final class JsonLogic {
 		addOperation    (m, ">="          , 2, 3, (ev, args, path) -> evaluateBoolean(">=", (a,b)->(a >= b), ev, args, path));
 		addOperation    (m, "<"           , 2, 3, (ev, args, path) -> evaluateBoolean("<" , (a,b)->(a <  b), ev, args, path));
 		addOperation    (m, "<="          , 2, 3, (ev, args, path) -> evaluateBoolean("<=", (a,b)->(a <= b), ev, args, path));
-		addOperation    (m, "!"           , 1, 1, (ev, args, path) -> args.isEmpty() ? false : ! ev.asBoolean(args.get(0), path));
+		addOperation    (m, "!"           , 1, 1, (ev, args, path) -> args.isEmpty() ? false : ! ev.asBoolean(args.get(0), path.sub(0)));
 		addOperation    (m, "!!"          , 1, 1, (ev, args, path) -> args.isEmpty() ? true  :   ev.asBoolean(args.get(0), path.sub(0)));
 		addOperation    (m, "and"         , 1, 0, (ev, args, path) -> andOr       (true , ev, args, path));
 		addOperation    (m, "or"          , 1, 0, (ev, args, path) -> andOr       (false, ev, args, path));
