@@ -1,10 +1,11 @@
 [
-  [
-    {},
-    {},
-    "$",
-    "objects must have exactly 1 key defined, found 0"
+  [ {"missing_some":[1]}, {}, "$.missing_some",
+    "missing_some expects at least 2 arguments"
   ],
+  [ {"missing_some":[1, 2]}, {}, "$.missing_some",
+    "missing_some expects first argument to be an integer and the second argument to be an array"
+  ],
+  [ {}, {}, "$", "objects must have single key defined, found 0" ],
   [
     {"all":[1]},
     {},
@@ -39,13 +40,13 @@
     {"cat":["foo", {}]},
     {},
     "$.cat[1]",
-    "objects must have exactly 1 key defined, found 0"
+    "objects must have single key defined, found 0"
   ],
   [
     {"==":[0]},
     {},
     "$.==",
-    "equality expressions expect exactly 2 arguments"
+    "'==' expects exactly 2 arguments"
   ],
   [
     {"filter":[0]},
@@ -63,19 +64,19 @@
     {"filter":["foo", {}]},
     {},
     "$.filter[1]",
-    "objects must have exactly 1 key defined, found 0"
+    "objects must have single key defined, found 0"
   ],
   [
     {"if":[{}]},
     {},
     "$.if[0]",
-    "objects must have exactly 1 key defined, found 0"
+    "objects must have single key defined, found 0"
   ],
   [
     {"if":[true,{}]},
     {},
     "$.if[1]",
-    "objects must have exactly 1 key defined, found 0"
+    "objects must have single key defined, found 0"
   ],
   [
     {"if":[false,1,{"filter":[1]}]},
@@ -93,31 +94,31 @@
     {"!=":[0]},
     {},
     "$.!=",
-    "equality expressions expect exactly 2 arguments"
+    "'!=' expects exactly 2 arguments"
   ],
   [
     {"log":[]},
     {},
     "$.log",
-    "log operator requires exactly 1 argument"
+    "log expects single argument"
   ],
   [
     {"and":[]},
     {},
     "$.and",
-    "and operator expects at least 1 argument"
+    "and expects at least 1 argument"
   ],
   [
     {"and":[true,{"log":[]}]},
     {},
     "$.and[1].log",
-    "log operator requires exactly 1 argument"
+    "log expects single argument"
   ],
   [
     {"or":[]},
     {},
     "$.or",
-    "or operator expects at least 1 argument"
+    "or expects at least 1 argument"
   ],
   [
     {"map":[1]},
@@ -129,85 +130,53 @@
     {"+":[1, {"-": [2, {"*": [3, {"/": [4, {"log":[]}]}]}]}]},
     {},
     "$.+[1].-[1].*[1]./[1].log",
-    "log operator requires exactly 1 argument"
+    "log expects single argument"
   ],
   [
     {"%":[1, {"min": [2, {"max": [3, {"log":[]}]}]}]},
     {},
     "$.%[1].min[1].max[1].log",
-    "log operator requires exactly 1 argument"
+    "log expects single argument"
   ],
   [
     {"merge":[1, 2, {"log":[]}]},
     {},
     "$.merge[2].log",
-    "log operator requires exactly 1 argument"
-  ],
-  [
-    {"missing_some":[1]},
-    {},
-    "$.missing_some",
-    "missing_some expects first argument to be an integer and the second argument to be an array"
-  ],
-  [
-    {"missing_some":[1, 2]},
-    {},
-    "$.missing_some",
-    "missing_some expects first argument to be an integer and the second argument to be an array"
+    "log expects single argument"
   ],
   [
     {"missing":[1, {"log":[]}]},
     {},
     "$.missing[1].log",
-    "log operator requires exactly 1 argument"
+    "log expects single argument"
   ],
   [
     {"!":[1, {"log":[]}]},
     {},
     "$.![1].log",
-    "log operator requires exactly 1 argument"
+    "log expects single argument"
   ],
   [
     {"!!":[{"log":[]}]},
     {},
     "$.!![0].log",
-    "log operator requires exactly 1 argument"
+    "log expects single argument"
   ],
-  [
-    {"<":[1]},
-    {},
-    "$.<",
-    "'<' requires at least 2 arguments"
-  ],
-  [
-    {">":[1]},
-    {},
-    "$.>",
-    "'>' requires at least 2 arguments"
-  ],
-  [
-    {"<=":[1]},
-    {},
-    "$.<=",
-    "'<=' requires at least 2 arguments"
-  ],
-  [
-    {">=":[1]},
-    {},
-    "$.>=",
-    "'>=' requires at least 2 arguments"
-  ],
+  [ {"<":[1]}, {}, "$.<", "'<' expects 2 or 3 arguments" ],
+  [ {">":[1]}, {}, "$.>", "'>' expects 2 or 3 arguments" ],
+  [ {"<=":[1]}, {}, "$.<=", "'<=' expects 2 or 3 arguments" ],
+  [ {">=":[1]}, {}, "$.>=", "'>=' expects 2 or 3 arguments" ],
   [
     {">":[1, {"log":[]}]},
     {},
     "$.>[1].log",
-    "log operator requires exactly 1 argument"
+    "log expects single argument"
   ],
   [
     {">":[0, 1, 2, "three", 4, 5, {"log":[]}]},
     {},
     "$.>[6].log",
-    "log operator requires exactly 1 argument"
+    "log expects single argument"
   ],
   [
     {"reduce":[1]},
@@ -219,32 +188,22 @@
     {"reduce":[{"log":[]}, 2, 3]},
     {},
     "$.reduce[0].log",
-    "log operator requires exactly 1 argument"
+    "log expects single argument"
   ],
   [
     {"reduce":[[1], {"log":[]}, 3]},
     {},
     "$.reduce[1].log",
-    "log operator requires exactly 1 argument"
+    "log expects single argument"
   ],
   [
     {"reduce":[1, 2, {"log":[]}]},
     {},
     "$.reduce[2].log",
-    "log operator requires exactly 1 argument"
+    "log expects single argument"
   ],
-  [
-    {"===":[1]},
-    {},
-    "$.===",
-    "equality expressions expect exactly 2 arguments"
-  ],
-  [
-    {"!==":[1]},
-    {},
-    "$.!==",
-    "equality expressions expect exactly 2 arguments"
-  ],
+  [ {"===":[1]}, {}, "$.===", "'===' expects exactly 2 arguments" ],
+  [ {"!==":[1]}, {}, "$.!==", "'!==' expects exactly 2 arguments" ],
   [
     {"substr":["jsonlogic"]},
     {},

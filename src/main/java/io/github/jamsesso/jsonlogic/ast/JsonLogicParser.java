@@ -48,7 +48,7 @@ public final class JsonLogicParser {
 				case final Boolean   b -> values.push(b);
 				case final List<?>   l -> values.push(l);
 				case final Map<?, ?> t -> {
-					if (t.size() != 1) throw new JsonLogicParseException("objects must have exactly 1 key defined, found " + t.size(), jsonPath);
+					if (t.size() != 1) throw new JsonLogicParseException("objects must have single key defined, found " + t.size(), jsonPath);
 					final var entry = t.entrySet().iterator().next();
 					final var key = entry.getKey().toString().toLowerCase();
 					final var rawArgs = JSON.plain(entry.getValue());

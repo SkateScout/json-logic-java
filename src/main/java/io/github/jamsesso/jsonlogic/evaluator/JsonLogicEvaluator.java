@@ -95,7 +95,7 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 				}
 				}
 			}
-			default -> throw new IllegalStateException("Unexpected stack element: " + next);
+			default -> throw new IllegalStateException("Unexpected stack element: {"+next.getClass().getCanonicalName()+"}" + next);
 			}
 		}
 		final var ret = values.pop();
