@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import io.github.jamsesso.jsonlogic.INumeric;
-import io.github.jamsesso.jsonlogic.JsonLogic;
 import io.github.jamsesso.jsonlogic.NullableDeque;
 import io.github.jamsesso.jsonlogic.PathSegment;
 import io.github.jamsesso.jsonlogic.ast.JSON;
@@ -18,12 +17,17 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 	public JsonLogicEvaluator { expressions = Collections.unmodifiableMap(expressions); }
 	public JsonLogicEvaluator scoped(final Object scopeData) { return new JsonLogicEvaluator(expressions, number, scopeData); }
 
-	static enum TASK { LIST, VAR, TASK }
-	public Object evaluate(final Object logic, final PathSegment jsonPath_) throws JsonLogicEvaluationException {
+	static enum TASK {
+		/** stack:= N [N]<TASK path, value> */ LIST,
+		/** stack:= path key default        */ VAR ,
+		/** stack:= path value              */ TASK
+	}
+
+	public Object evaluate(final Object logic, final PathSegment jsonPath) throws JsonLogicEvaluationException {
 		final var todo   = new NullableDeque<>(128);
 		final var values = new NullableDeque<>(128);
 		todo.push(TASK.TASK);
-		todo.push(jsonPath_);
+		todo.push(jsonPath);
 		todo.push(logic);
 		while (!todo.isEmpty()) {
 			final var next = todo.pop();
@@ -38,7 +42,7 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 			case final TASK   t -> {
 				switch(t) {
 				case LIST -> {
-					final var size         = (Integer)values.pop();
+					final var size    = (Integer)values.pop();
 					final var results = new Object[size];
 					for (var i = size - 1; i >= 0; i--) results[i] = values.pop();
 					values.push(Arrays.asList(results));
@@ -53,7 +57,7 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 				}
 				case TASK -> {
 					final var path = (PathSegment)values.pop();
-					final var p0   = values.pop();
+					final var p0   =              values.pop();
 					switch (p0) {
 					case null             -> { values.push(null); continue; }
 					case final Number   _ -> { values.push(p0); continue; }
@@ -99,11 +103,11 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 	}
 
 	@SuppressWarnings("unchecked")
-	public List<Object> evaluate(final List<?> t, final PathSegment jsonPath) throws JsonLogicEvaluationException {
-		return (List<Object>)evaluate((Object)t, jsonPath);
+	public List<Object> evaluate(final List<?> t, final PathSegment path) throws JsonLogicEvaluationException {
+		return (List<Object>)evaluate((Object)t, path);
 	}
 
-	public static boolean evalNeeded(final Object v) {
+	private static boolean evalNeeded(final Object v) {
 		return switch(v) {
 		case null           -> false;
 		case final String  _-> false;
@@ -113,42 +117,41 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 		};
 	}
 
-	public Number asNumber(final Object p0, final PathSegment jsonPath) throws JsonLogicEvaluationException {
-		final var value = evalNeeded(p0) ? evaluate(p0, jsonPath) : p0;
+	public Number  asNumber (final Object p0               , final PathSegment path) throws JsonLogicEvaluationException {
+		final var value = evalNeeded(p0) ? evaluate(p0, path) : p0;
 		if (value instanceof final Number t) return t;
 		if (value instanceof final String t) try { return Double.parseDouble(t); } catch (final NumberFormatException e) { return null; }
-		if (JSON.isList(value) && JSON.asList(value) instanceof final List<?> l && !l.isEmpty()) return asNumber(l.get(0), jsonPath);
+		if (JSON.isList(value) && JSON.asList(value) instanceof final List<?> l && !l.isEmpty()) return asNumber(l.get(0), path);
 		return null;
 	}
 
-	public Number asNumber(final List<?> p, final int idx, final PathSegment jsonPath) throws JsonLogicEvaluationException {
+	public Number  asNumber (final List<?> p, final int idx, final PathSegment path) throws JsonLogicEvaluationException {
 		var value = p.get(idx);
-		value = evalNeeded(value) ? evaluate(value, jsonPath.sub(idx)) : value;
+		value = evalNeeded(value) ? evaluate(value, path.sub(idx)) : value;
 		if (value instanceof final Number t) return t;
 		if (value instanceof final String t) try { return Double.parseDouble(t); } catch (final NumberFormatException e) { return null; }
-		if (JSON.isList(value) && JSON.asList(value) instanceof final List<?> l && !l.isEmpty()) return asNumber(l.get(0), jsonPath.sub(idx));
+		if (JSON.isList(value) && JSON.asList(value) instanceof final List<?> l && !l.isEmpty()) return asNumber(l.get(0), path.sub(idx));
 		return null;
 	}
 
-	public Double asDouble(final Object p0, final PathSegment jsonPath) throws JsonLogicEvaluationException {
-		final var value = evalNeeded(p0) ? evaluate(p0, jsonPath) : p0;
+	public Double  asDouble (final Object p0               , final PathSegment path) throws JsonLogicEvaluationException {
+		final var value = evalNeeded(p0) ? evaluate(p0, path) : p0;
 		if (value instanceof final Number t) return t.doubleValue();
 		if (value instanceof final String t) try { return Double.parseDouble(t); } catch (final NumberFormatException e) { return null; }
-		if (JSON.isList(value) && JSON.asList(value) instanceof final List<?> l && !l.isEmpty()) return asDouble(l.get(0), jsonPath);
+		if (JSON.isList(value) && JSON.asList(value) instanceof final List<?> l && !l.isEmpty()) return asDouble(l.get(0), path);
 		return null;
 	}
 
-	public Double asDouble(final List<?> p, final int idx, final PathSegment jsonPath) throws JsonLogicEvaluationException {
+	public Double  asDouble (final List<?> p, final int idx, final PathSegment path) throws JsonLogicEvaluationException {
 		var value = p.get(idx);
-		value = evalNeeded(value) ? evaluate(value, jsonPath.sub(idx)) : value;
+		value = evalNeeded(value) ? evaluate(value, path.sub(idx)) : value;
 		if (value instanceof final Number t) return t.doubleValue();
 		if (value instanceof final String t) try { return Double.parseDouble(t); } catch (final NumberFormatException e) { return null; }
-		if (JSON.isList(value) && JSON.asList(value) instanceof final List<?> l && !l.isEmpty()) return asDouble(l.get(0), jsonPath.sub(idx));
+		if (JSON.isList(value) && JSON.asList(value) instanceof final List<?> l && !l.isEmpty()) return asDouble(l.get(0), path.sub(idx));
 		return null;
 	}
 
-	public boolean asBoolean(final Object p0, final PathSegment jsonPath) throws JsonLogicEvaluationException {
-		final var value = evalNeeded(p0) ? evaluate(p0, jsonPath) : p0;
-		return JsonLogic.truthy(value);
+	public boolean asBoolean(final Object p0               , final PathSegment path) throws JsonLogicEvaluationException {
+		return JSON.truthy(evalNeeded(p0) ? evaluate(p0, path) : p0);
 	}
 }

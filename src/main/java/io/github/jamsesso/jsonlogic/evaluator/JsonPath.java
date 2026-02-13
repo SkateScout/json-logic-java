@@ -37,8 +37,7 @@ public class JsonPath {
 				} else if (result instanceof final Map map) {
 					if(!map.containsKey(key)) return MISSING;
 					result = map.get(key);
-				} else throw new JsonLogicEvaluationException("Variable type "+result.getClass().getCanonicalName()+" unsupported, result:"+result.getClass().getCanonicalName(), jsonPath);
-
+				} else return MISSING;
 			}
 			return result;
 		}

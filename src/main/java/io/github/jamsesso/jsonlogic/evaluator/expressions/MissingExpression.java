@@ -24,9 +24,7 @@ public record MissingExpression(boolean isSome) implements JsonLogicExpressionFI
 		Number someCnt = 0.;
 		if(isSome && (!JSON.isList(arguments.get(1)) || (null == (someCnt = evaluator.asNumber(args, 0, jsonPath)))))
 			throw new JsonLogicEvaluationException("missing_some expects first argument to be an integer and the second argument to be an array", jsonPath);
-
 		if (!JSON.isMap(evaluator.data())) return (isSome ? (someCnt.intValue() <= 0 ? Collections.EMPTY_LIST : arguments.get(1)) : arguments);
-
 		final var map          = JSON.asMap(evaluator.data());
 		final var options      = isSome ? JSON.asList(arguments.get(1)) : arguments;
 		final var providedKeys = getFlatKeys(map);
