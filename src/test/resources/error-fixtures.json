@@ -150,18 +150,8 @@
     "$.missing[1].log",
     "log expects single argument"
   ],
-  [
-    {"!":[1, {"log":[]}]},
-    {},
-    "$.![1].log",
-    "log expects single argument"
-  ],
-  [
-    {"!!":[{"log":[]}]},
-    {},
-    "$.!![0].log",
-    "log expects single argument"
-  ],
+  [ {"!":[1,{"log":[]}]}, {}, "$.!", "'!' expects single argument" ],
+  [ {"!!":[{"log":[]}]}, {}, "$.!![0].log", "log expects single argument" ],
   [ {"<":[1]}, {}, "$.<", "'<' expects 2 or 3 arguments" ],
   [ {">":[1]}, {}, "$.>", "'>' expects 2 or 3 arguments" ],
   [ {"<=":[1]}, {}, "$.<=", "'<=' expects 2 or 3 arguments" ],
@@ -172,12 +162,7 @@
     "$.>[1].log",
     "log expects single argument"
   ],
-  [
-    {">":[0, 1, 2, "three", 4, 5, {"log":[]}]},
-    {},
-    "$.>[6].log",
-    "log expects single argument"
-  ],
+  [ {">":[0, 1, 2, "three", 4, 5, {"log":[]}]}, {}, "$.>", "'>' expects 2 or 3 arguments" ],
   [
     {"reduce":[1]},
     {},
