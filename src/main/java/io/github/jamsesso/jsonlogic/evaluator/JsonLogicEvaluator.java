@@ -51,9 +51,10 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 					final var path         = (PathSegment)values.pop();
 					final var key          = values.pop();
 					final var defaultValue = values.pop();
-					final var res          = JsonPath.evaluate(key, path, data);
-					if(res == JsonPath.MISSING) values.push(defaultValue);
-					else                        values.push(res);
+					var res          = JsonPath.evaluate(key, path, data);
+					if(res == JsonPath.MISSING) res = defaultValue;
+					if(res instanceof final Number n) res = n.doubleValue();
+					values.push(res);
 				}
 				case TASK -> {
 					final var path = (PathSegment)values.pop();

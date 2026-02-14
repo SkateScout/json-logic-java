@@ -69,11 +69,18 @@ public final class JsonLogic {
 		final var m = new HashMap<String, JsonLogicExpressionFI>();
 		addOperation    (m, "if"                , JsonLogic::ifExpt);	// IF
 		addOperation    (m, "?:"                , JsonLogic::ifExpt);	// TERNARY
-		addOperation    (m, ">"           , 2, 3, (ev, args, path) -> evaluateBoolean(">" , (a,b)->(a >  b), ev, args, path));
-		addOperation    (m, ">="          , 2, 3, (ev, args, path) -> evaluateBoolean(">=", (a,b)->(a >= b), ev, args, path));
-		addOperation    (m, "<"           , 2, 3, (ev, args, path) -> evaluateBoolean("<" , (a,b)->(a <  b), ev, args, path));
-		addOperation    (m, "<="          , 2, 3, (ev, args, path) -> evaluateBoolean("<=", (a,b)->(a <= b), ev, args, path));
-		addOperation    (m, "!"           , 1, 1, (ev, args, path) -> args.isEmpty() ? false : ! ev.asBoolean(args.get(0), path.sub(0)));
+
+		addOperation    (m, ">"           , 2, 0, (ev, args, path) -> evaluateBoolean(">" , (a,b)->(a >  b), ev, args, path));
+		addOperation    (m, ">="          , 2, 0, (ev, args, path) -> evaluateBoolean(">=", (a,b)->(a >= b), ev, args, path));
+		addOperation    (m, "<"           , 2, 0, (ev, args, path) -> evaluateBoolean("<" , (a,b)->(a <  b), ev, args, path));
+		addOperation    (m, "<="          , 2, 0, (ev, args, path) -> evaluateBoolean("<=", (a,b)->(a <= b), ev, args, path));
+
+		addOperation    (m, "!"           , 0, 0, (ev, args, path) -> {
+			if(args.isEmpty()) return false;
+			if(args.size()>1) throw new JsonLogicEvaluationException("'!' expects single argument", path);
+			return ! ev.asBoolean(args.get(0), path.sub(0));
+		});
+
 		addOperation    (m, "!!"          , 1, 1, (ev, args, path) -> args.isEmpty() ? true  :   ev.asBoolean(args.get(0), path.sub(0)));
 		addOperation    (m, "and"         , 1, 0, (ev, args, path) -> andOr       (true , ev, args, path));
 		addOperation    (m, "or"          , 1, 0, (ev, args, path) -> andOr       (false, ev, args, path));
@@ -111,6 +118,7 @@ public final class JsonLogic {
 	}
 
 	private static boolean evaluateBoolean(final String name, final BiPredicate<Double, Double> compare, final JsonLogicEvaluator evaluator, final List<?> arguments, final PathSegment path) throws JsonLogicEvaluationException {
+		if(arguments.size() < 2) throw new JsonLogicEvaluationException("'"+name+"' expects 2 or 3 arguments", path);
 		// If regular comparisons fail also between will fail
 		if(!(evaluator.asDouble(arguments, 0, path) instanceof final Double a)
 				|| !(evaluator.asDouble(arguments, 1, path) instanceof final Double b) || !compare.test(a, b)) return false;
@@ -135,8 +143,7 @@ public final class JsonLogic {
 		for (final var element : arguments) {
 			value = evaluator.evaluate(element, path.sub(index++));
 			final var result =  JSON.truthy(value);
-			if( isAnd && !result) return false;
-			if(!isAnd &&  result) return value;
+			if((isAnd && !result) || (!isAnd &&  result)) return value;
 		}
 		return value;
 	}

@@ -56,6 +56,7 @@ public class JSON {
 		}
 		default -> {
 			if(o == org.json.JSONObject.NULL     ) yield null; // Handle null
+			if(o.getClass().isArray()) yield JSON.asList(o);
 			throw new IllegalStateException("o "+o.getClass().getCanonicalName());
 			// yield o;
 		}
@@ -97,10 +98,14 @@ public class JSON {
 		if (data instanceof final List l) return l;
 		if(data instanceof final Object[] l) return Arrays.asList(l);
 		if (data != null && data.getClass().isArray()) {
-			System.out.println("asList({"+data.getClass().getCanonicalName()+"})");
+			// System.out.println("asList({"+data.getClass().getCanonicalName()+"})");
 			final var len = Array.getLength(data);
 			final var l   = new ArrayList<>(len);
-			for (var i = 0; i < len; i++) l.add(i, Array.get(data, i));
+			for (var i = 0; i < len; i++) {
+				var v = Array.get(data, i);
+				if(v instanceof final Integer t) v = t.doubleValue();
+				l.add(i, v);
+			}
 			return l;
 		}
 		if (data instanceof final Iterable iter) {
