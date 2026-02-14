@@ -22,10 +22,10 @@ jobs:
       uses: actions/checkout@v4
 
     # Schritt 1: Java Setup (Wichtig für die Analyse-Qualität)
-    - name: Set up JDK 17
+    - name: Set up JDK 25
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: '25'
         distribution: 'temurin'
         cache: 'maven'
 
