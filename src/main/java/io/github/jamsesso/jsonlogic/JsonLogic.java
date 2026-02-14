@@ -289,24 +289,21 @@ public final class JsonLogic {
 		});
 	}
 
-	/** Parse jsonText to logicExpression */
-	private Object   logicExpression(final String jsonTxt) throws JsonLogicException {
-		Object exprObj;
-		synchronized (parseCache) { exprObj = parseCache.get(jsonTxt); }
-		if(null == exprObj) {
-			final var jsonObj = JSON.parse(jsonTxt);
-			exprObj = JsonLogicParser.parse(jsonObj, PathSegment.ROOT);
-			synchronized (parseCache) {
-				parseCache.put(jsonTxt, exprObj);
-				parseCache.put(jsonObj, exprObj);
-			}
-		}
-		return exprObj;
-	}
-
 	/** Parse jsonObject to logicExpression */
 	private Object   logicExpression(final Object jsonObj) throws JsonLogicException {
-		if(jsonObj instanceof final String json) return logicExpression(json);
+		if(jsonObj instanceof final String jsonText) {
+			Object exprObj;
+			synchronized (parseCache) { exprObj = parseCache.get(jsonText); }
+			if(null == exprObj) {
+				final var parsed = JSON.parse(jsonText);
+				exprObj = JsonLogicParser.parse(parsed, PathSegment.ROOT);
+				synchronized (parseCache) {
+					parseCache.put(jsonText, exprObj);
+					parseCache.put(parsed  , exprObj);
+				}
+			}
+			return exprObj;
+		}
 		Object exprObj;
 		synchronized (parseCache) { exprObj = parseCache.get(jsonObj); }
 		if(null == exprObj) {
