@@ -217,7 +217,10 @@ public final class JsonLogic {
 		final var needle   = evaluator.evaluate(arguments.get(0), path.sub(0));
 		final var haystack = evaluator.evaluate(arguments.get(1), path.sub(1));
 		if (arguments.get(1) instanceof final String t) return (needle == null ? false : t.contains(needle.toString()));
-		return (JSON.isList(haystack) ? JSON.asList(haystack).contains(needle) : false);
+		if(!JSON.isList(haystack)) return false;
+		final var l = JSON.asList(haystack);
+		for(final var e : l) if(JSON.equalityValue(e, needle)) return true;
+		return false;
 	}
 
 	private static Object  log            (final JsonLogicEvaluator evaluator, final List<?> arguments, final PathSegment path) throws JsonLogicEvaluationException {
