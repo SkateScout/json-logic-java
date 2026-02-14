@@ -12,7 +12,7 @@ public interface PreEvaluatedArgumentsExpression extends JsonLogicExpression {
 	Object evaluate(List<?> arguments, PathSegment jsonPath) throws JsonLogicEvaluationException;
 
 	@Override default Object evaluate(final JsonLogicEvaluator evaluator, final List<?> arguments, final PathSegment jsonPath) throws JsonLogicEvaluationException {
-		var values = evaluator.evaluate(arguments, jsonPath);
+		var values = evaluator.evaluateList(arguments, jsonPath);
 		if (values.size() == 1 && JSON.isList(values.get(0))) values = JSON.asList(values.get(0));
 		return evaluate(values, jsonPath);
 	}

@@ -104,8 +104,8 @@ public record JsonLogicEvaluator(Map<String, JsonLogicExpressionFI> expressions,
 	}
 
 	@SuppressWarnings("unchecked")
-	public List<Object> evaluate(final List<?> t, final PathSegment path) throws JsonLogicEvaluationException {
-		return (List<Object>)evaluate((Object)t, path);
+	public List<Object> evaluateList(final List<?> t, final PathSegment path) throws JsonLogicEvaluationException {
+		return (List<Object>)evaluate(t, path);
 	}
 
 	private static boolean evalNeeded(final Object v) {

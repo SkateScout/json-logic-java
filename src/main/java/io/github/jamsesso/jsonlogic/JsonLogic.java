@@ -59,7 +59,7 @@ public final class JsonLogic {
 
 	private static void addListOperation(final Map<String, JsonLogicExpressionFI> e, final String name, final Function<List<?>, Object> function) {
 		addOperation(e, name, (JsonLogicExpressionFI) (evaluator, arguments, jsonPath) -> {
-			var values = evaluator.evaluate(arguments, jsonPath);
+			var values = evaluator.evaluateList(arguments, jsonPath);
 			if (values.size() == 1 && JSON.isList(values.get(0))) values = JSON.asList(values.get(0));
 			return function.apply(arguments);
 		});
@@ -275,7 +275,7 @@ public final class JsonLogic {
 
 	public JsonLogic addListOperation(final String name, final Function<List<?>, Object> function) {
 		return addOperation(name, (JsonLogicExpressionFI) (evaluator, arguments, jsonPath) -> {
-			var values = evaluator.evaluate(arguments, jsonPath);
+			var values = evaluator.evaluateList(arguments, jsonPath);
 			if (values.size() == 1 && JSON.isList(values.get(0))) values = JSON.asList(values.get(0));
 			return function.apply(arguments);
 		});
@@ -283,7 +283,7 @@ public final class JsonLogic {
 
 	public JsonLogic addOperation    (final String name, final Function<Object[], Object> function) {
 		return addOperation(name, (JsonLogicExpressionFI) (evaluator, arguments, jsonPath) -> {
-			var values = evaluator.evaluate(arguments, jsonPath);
+			var values = evaluator.evaluateList(arguments, jsonPath);
 			if (values.size() == 1 && JSON.isList(values.get(0))) values = JSON.asList(values.get(0));
 			return function.apply(arguments.toArray());
 		});
