@@ -76,7 +76,7 @@ public final class JsonLogic {
 		addOperation    (m, "<="          , 2, 0, (ev, args, path) -> evaluateBoolean("<=", (a,b)->(a <= b), ev, args, path));
 
 		addOperation    (m, "!"           , 0, 0, (ev, args, path) -> {
-			if(args.isEmpty()) return false;
+			if(args.isEmpty()) return true;
 			if(args.size()>1) throw new JsonLogicEvaluationException("'!' expects single argument", path);
 			return ! ev.asBoolean(args.get(0), path.sub(0));
 		});
@@ -143,7 +143,7 @@ public final class JsonLogic {
 		for (final var element : arguments) {
 			value = evaluator.evaluate(element, path.sub(index++));
 			final var result =  JSON.truthy(value);
-			if((isAnd && !result) || (!isAnd &&  result)) return value;
+			if(isAnd ^ result) return value;
 		}
 		return value;
 	}

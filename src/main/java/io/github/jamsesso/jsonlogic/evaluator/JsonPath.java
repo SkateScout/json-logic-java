@@ -6,7 +6,7 @@ import java.util.Map;
 import io.github.jamsesso.jsonlogic.PathSegment;
 import io.github.jamsesso.jsonlogic.ast.JSON;
 
-public class JsonPath {
+class JsonPath {
 	private JsonPath()  { }
 	/** Sentinel object to represent a missing value (for internal use only). */
 	public static final Object MISSING = new Object();
@@ -26,7 +26,9 @@ public class JsonPath {
 			final var keys = name.split("\\.");
 			var result = data;
 			jsonPath = jsonPath.sub(0);
+			var level = -1;
 			for (final var key : keys) {
+				level++;
 				if(result == null || result == MISSING) return result;
 				result = JSON.plain(result);
 				if (JSON.isList(result)) {
@@ -37,7 +39,7 @@ public class JsonPath {
 				} else if (result instanceof final Map map) {
 					if(!map.containsKey(key)) return MISSING;
 					result = map.get(key);
-				} else return MISSING;
+				} else return level==0?MISSING:null;
 			}
 			return result;
 		}

@@ -61,7 +61,7 @@ public class FixtureTests {
 			final var expectedValue = fixture.getExpectedValue();
 
 
-			System.out.println("actual       : {"+actual.getClass().getCanonicalName()+"}"+actual);
+			System.out.println("actual       : {"+(actual==null?null:actual.getClass().getCanonicalName())+"}"+actual);
 			System.out.println("json         : "+fixture.getJson());
 			System.out.println("data         : "+fixture.getData());
 			System.out.println("expectedValue: {"+(null==expectedValue?null:expectedValue.getClass().getCanonicalName())+"}"+expectedValue);

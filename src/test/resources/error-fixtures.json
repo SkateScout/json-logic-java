@@ -152,8 +152,8 @@
   ],
   [ {"!":[1,{"log":[]}]}, {}, "$.!", "'!' expects single argument" ],
   [ {"!!":[{"log":[]}]}, {}, "$.!![0].log", "log expects single argument" ],
-  [ {"<":[1]}, {}, "$.<", "<' expects at least 2 arguments" ],
-  [ {">":[1]}, {}, "$.>", ">' expects at least 2 arguments" ],
+  [ {"<":[1]}, {}, "$.<", "'<' expects at least 2 arguments" ],
+  [ {">":[1]}, {}, "$.>", "'>' expects at least 2 arguments" ],
   [ {"<=":[1]}, {}, "$.<=", "'<=' expects at least 2 arguments" ],
   [ {">=":[1]}, {}, "$.>=", "'>=' expects at least 2 arguments" ],
   [
