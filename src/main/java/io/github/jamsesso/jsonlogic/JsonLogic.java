@@ -70,9 +70,9 @@ public final class JsonLogic {
 		addOperation    (m, "if"                , JsonLogic::ifExpt);	// IF
 		addOperation    (m, "?:"                , JsonLogic::ifExpt);	// TERNARY
 
-		addOperation    (m, ">"           , 2, 0, (ev, args, path) -> evaluateBoolean(">" , (a,b)->(a >  b), ev, args, path));
+		addOperation    (m, ">"           , 2, 3, (ev, args, path) -> evaluateBoolean(">" , (a,b)->(a >  b), ev, args, path));
 		addOperation    (m, ">="          , 2, 0, (ev, args, path) -> evaluateBoolean(">=", (a,b)->(a >= b), ev, args, path));
-		addOperation    (m, "<"           , 2, 0, (ev, args, path) -> evaluateBoolean("<" , (a,b)->(a <  b), ev, args, path));
+		addOperation    (m, "<"           , 2, 3, (ev, args, path) -> evaluateBoolean("<" , (a,b)->(a <  b), ev, args, path));
 		addOperation    (m, "<="          , 2, 0, (ev, args, path) -> evaluateBoolean("<=", (a,b)->(a <= b), ev, args, path));
 
 		addOperation    (m, "!"           , 0, 0, (ev, args, path) -> {

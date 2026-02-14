@@ -126,7 +126,11 @@ public class JsonParserString {
 		return result == NULL ? null : result;
 	}
 
-	private static double parseNumber(final String json, final int start, final int end, final int line, final int col) {
+	private static final double[] POWERS_OF_10 ; static { var v = 1L; POWERS_OF_10 = new double[19]; for(var i=0;i<19;i++) { POWERS_OF_10[i]=v; v*=10; } }
+	private static boolean isDigit     (final char c) { return (c >= '0' && c <= '9'); }
+	private static boolean isNumberChar(final char c) { return (c >= '0' && c <= '9') || c == '.' || c == '-' || c == '+' || c == 'e' || c == 'E'; }
+
+	public static double parseNumber(final String json, final int start, final int end, final int line, final int col) {
 		var mantissa = 0L;
 		var exp = 0;
 		var i = start;
@@ -164,12 +168,10 @@ public class JsonParserString {
 			exp += (eNeg ? -eVal : eVal);
 		}
 		if (i != end) throw error(line, col, "Invalid number syntax", i);
-		final var res = mantissa * Math.pow(10, exp);
+		final var absExp = Math.abs(exp);
+		final var res = (absExp < POWERS_OF_10.length ? (exp >= 0 ? mantissa * POWERS_OF_10[absExp] : mantissa / POWERS_OF_10[absExp]) : mantissa * Math.pow(10, exp));
 		return neg ? -res : res;
 	}
-
-	private static boolean isDigit     (final char c) { return (c >= '0' && c <= '9'); }
-	private static boolean isNumberChar(final char c) { return (c >= '0' && c <= '9') || c == '.' || c == '-' || c == '+' || c == 'e' || c == 'E'; }
 
 	private static int parseHexDigit(final char c) {
 		if (c >= '0' && c <= '9') return c - '0';
