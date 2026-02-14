@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.json.JSONObject;
-import org.json.JsonStringParser;
 
 import com.google.gson.JsonElement;
 
@@ -65,7 +64,7 @@ public class JSON {
 
 	public static Object parse(final String json) throws JsonLogicParseException {
 		try {
-			if(true) return JsonStringParser.parse(json);
+			if(true) return JsonParserString.parse(json);
 		} catch(final Throwable t) {
 			System.out.println(json+" => "+t.getMessage());
 			t.printStackTrace();
