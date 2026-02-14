@@ -31,7 +31,7 @@ jobs:
 
     # Schritt 2: CodeQL initialisieren
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
+      uses: github/codeql-action/init@v4
       with:
         languages: java
         # "extended-queries" findet mehr Probleme, dauert aber etwas länger
@@ -44,6 +44,6 @@ jobs:
 
     # Schritt 4: Analyse durchführen
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      uses: github/codeql-action/analyze@v4
       with:
         category: "/language:java"
