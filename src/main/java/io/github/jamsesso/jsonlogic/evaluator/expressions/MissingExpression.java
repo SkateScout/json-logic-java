@@ -17,9 +17,9 @@ public record MissingExpression(boolean isSome) implements JsonLogicExpressionFI
 	@Override
 	public Object evaluate(final JsonLogicEvaluator evaluator, final List<?> args, final PathSegment jsonPath) throws JsonLogicEvaluationException {
 		if (isSome && (args.size() < 2)) throw new JsonLogicEvaluationException("missing_some expects first argument to be an integer and the second argument to be an array", jsonPath);
-		var values = evaluator.evaluate(args, jsonPath);
+		var values = evaluator.evaluateList(args, jsonPath);
 		if (values.size() == 1 && JSON.isList(values.get(0))) values = JSON.asList(values.get(0));
-		final var arguments= evaluator.evaluate(values, jsonPath);
+		final var arguments= evaluator.evaluateList(values, jsonPath);
 
 		Number someCnt = 0.;
 		if(isSome && (!JSON.isList(arguments.get(1)) || (null == (someCnt = evaluator.asNumber(args, 0, jsonPath)))))
